@@ -13,13 +13,16 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.mcclabs.gimmer.data.DailyCondition
 import com.mcclabs.gimmer.data.MAX_SLEEP_MINUTES
 import com.mcclabs.gimmer.data.MIN_SLEEP_MINUTES
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.map
 import java.time.LocalDate
 import kotlin.math.roundToInt
 
 private const val SLEEP_STEP_MINUTES = 30
+private data class SleepState(val loaded: Boolean = false, val condition: DailyCondition? = null)
 
 @Composable
 internal fun DailyConditionCard(viewModel: WorkoutViewModel) {
@@ -34,8 +37,11 @@ internal fun DailyConditionCard(viewModel: WorkoutViewModel) {
 
 @Composable
 private fun SleepEntry(date: LocalDate, viewModel: WorkoutViewModel) {
-    val conditionFlow = remember(viewModel, date) { viewModel.dailyCondition(date) }
-    val condition by conditionFlow.collectAsStateWithLifecycle(initialValue = null)
+    val conditionFlow = remember(viewModel, date) {
+        viewModel.dailyCondition(date).map { SleepState(loaded = true, condition = it) }
+    }
+    val state by conditionFlow.collectAsStateWithLifecycle(SleepState())
+    val condition = state.condition
     var draft by rememberSaveable { mutableStateOf<Int?>(null) }
     var saving by remember { mutableStateOf(false) }
     val minutes = draft ?: condition?.sleepMinutes ?: 420
@@ -55,7 +61,7 @@ private fun SleepEntry(date: LocalDate, viewModel: WorkoutViewModel) {
                 onValueChange = { draft = (it / SLEEP_STEP_MINUTES).roundToInt() * SLEEP_STEP_MINUTES },
                 valueRange = MIN_SLEEP_MINUTES.toFloat()..MAX_SLEEP_MINUTES.toFloat(),
                 steps = (MAX_SLEEP_MINUTES - MIN_SLEEP_MINUTES) / SLEEP_STEP_MINUTES - 1,
-                enabled = !saving,
+                enabled = !saving && state.loaded,
                 modifier = Modifier.semantics {
                     contentDescription = "Gece uykusu süresi"
                     stateDescription = duration
@@ -71,7 +77,7 @@ private fun SleepEntry(date: LocalDate, viewModel: WorkoutViewModel) {
                     draft = minutes
                     viewModel.saveSleep(date, minutes).invokeOnCompletion { saving = false }
                 },
-                enabled = !saving && condition?.sleepMinutes != minutes,
+                enabled = !saving && state.loaded && condition?.sleepMinutes != minutes,
                 modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
             ) {
                 Text(when {

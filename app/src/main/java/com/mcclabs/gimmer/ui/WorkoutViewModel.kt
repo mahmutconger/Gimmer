@@ -69,19 +69,19 @@ class WorkoutViewModel(application: Application, savedState: SavedStateHandle) :
             vibrator.vibrate(VibrationEffect.createOneShot(100, VibrationEffect.DEFAULT_AMPLITUDE))
         }
     }
-    val days = WorkoutCatalog.days
+    val days = repository.routine.stateIn(viewModelScope, SharingStarted.Eagerly, null)
     val bodyweights = repository.bodyweights.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
     val filter = MutableStateFlow(LogFilter())
     private val searchQuery = filter.map { it.query.trim() }.distinctUntilChanged()
         .debounce { if (it.isEmpty()) 0L else 180L }
     private val selectedFilters = filter.map { it.copy(query = "") }.distinctUntilChanged()
-    val progressSummaries = combine(searchQuery, selectedFilters) { query, options -> options.copy(query = query) }
-        .flatMapLatest {
-            val query = it.query.lowercase(Turkish)
-            val names = WorkoutCatalog.exercisesByName.values
+    val progressSummaries = combine(searchQuery, selectedFilters, days) { query, options, routine ->
+            options.copy(query = query) to routine.orEmpty()
+        }.flatMapLatest { (options, routine) ->
+            val query = options.query.lowercase(Turkish)
+            val matches = (WorkoutCatalog.exercisesById.values + routine.flatMap { it.exercises })
                 .filter { exercise -> query.isNotEmpty() && exercise.displayName.lowercase(Turkish).contains(query) }
-                .map { exercise -> exercise.name }
-            repository.summaries(it.query, it.day, it.muscle, it.includeWarmups, names)
+            repository.summaries(options.query, options.day, options.muscle, options.includeWarmups, matches)
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), null)
     val exportedJson = MutableStateFlow("")
     val cloudBusy = MutableStateFlow(false)
@@ -122,8 +122,8 @@ class WorkoutViewModel(application: Application, savedState: SavedStateHandle) :
         }.flowOn(Dispatchers.Default)
     }
 
-    internal fun exerciseHistory(name: String) = selectedFilters.flatMapLatest {
-        repository.exerciseLogs(name, it.day, it.muscle, it.includeWarmups)
+    internal fun exerciseHistory(name: String, exerciseId: String?) = selectedFilters.flatMapLatest {
+        repository.exerciseLogs(name, it.day, it.muscle, it.includeWarmups, exerciseId)
     }.map { logs ->
         ExerciseHistory(
             logs = logs.asReversed(),
@@ -159,6 +159,11 @@ class WorkoutViewModel(application: Application, savedState: SavedStateHandle) :
 
     fun saveSleep(date: LocalDate, minutes: Int) = perform("Gece uykusu kaydedildi.") {
         repository.saveDailyCondition(DailyCondition(date.toString(), minutes))
+    }
+
+    fun replaceRoutine(days: List<WorkoutDay>, onSaved: () -> Unit) = perform("Antrenman programı güncellendi.") {
+        repository.replaceRoutine(days)
+        onSaved()
     }
     fun updateLog(log: WorkoutLog, onSaved: () -> Unit) = perform("Kayıt güncellendi.") {
         repository.update(log); onSaved()

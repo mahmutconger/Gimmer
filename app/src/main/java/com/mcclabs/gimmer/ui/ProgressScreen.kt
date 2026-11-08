@@ -26,9 +26,11 @@ import com.mcclabs.gimmer.data.WorkoutLog
 import com.mcclabs.gimmer.data.WorkoutCatalog
 
 @Composable
-fun ProgressScreen(viewModel: WorkoutViewModel, bottomSpace: Dp, onExercise: (String) -> Unit) {
+fun ProgressScreen(viewModel: WorkoutViewModel, bottomSpace: Dp, onExercise: (ExerciseSummary) -> Unit) {
     val summaries by viewModel.progressSummaries.collectAsStateWithLifecycle()
     val bodyweights by viewModel.bodyweights.collectAsStateWithLifecycle()
+    val days by viewModel.days.collectAsStateWithLifecycle()
+    val names = remember(days) { days.orEmpty().flatMap { it.exercises }.associate { it.id to it.displayName } }
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 20.dp, top = 20.dp, end = 20.dp, bottom = 20.dp + bottomSpace),
@@ -50,8 +52,10 @@ fun ProgressScreen(viewModel: WorkoutViewModel, bottomSpace: Dp, onExercise: (St
             entries.isEmpty() -> item {
                 EmptyMessage("Kayıt bulunamadı", "Bir set kaydet veya arama ve filtreleri değiştir.")
             }
-            else -> items(entries, key = { it.exerciseName }) { summary ->
-                ExerciseSummaryRow(summary) { onExercise(summary.exerciseName) }
+            else -> items(entries, key = { it.exerciseId?.let { id -> "exercise:$id" } ?: "legacy:${it.exerciseName}" }) { summary ->
+                ExerciseSummaryRow(summary, names[summary.exerciseId] ?: WorkoutCatalog.displayName(summary.exerciseName)) {
+                    onExercise(summary)
+                }
             }
         }
     }
@@ -60,10 +64,11 @@ fun ProgressScreen(viewModel: WorkoutViewModel, bottomSpace: Dp, onExercise: (St
 @Composable
 private fun HistoryFilters(viewModel: WorkoutViewModel) {
     val filter by viewModel.filter.collectAsStateWithLifecycle()
+    val days by viewModel.days.collectAsStateWithLifecycle()
     var showFilters by rememberSaveable { mutableStateOf(false) }
-    val dayOptions = remember(viewModel) { listOf("") + viewModel.days.map { it.name } }
-    val muscleOptions = remember(viewModel) {
-        listOf("") + viewModel.days.flatMap { it.exercises }.map { it.muscleGroup }.distinct()
+    val dayOptions = remember(days) { listOf("") + (days.orEmpty() + WorkoutCatalog.days).map { it.name }.distinct() }
+    val muscleOptions = remember(days) {
+        listOf("") + (days.orEmpty() + WorkoutCatalog.days).flatMap { it.exercises }.map { it.muscleGroup }.distinct()
     }
     val appliedFilters = listOf(filter.day.isNotEmpty(), filter.muscle.isNotEmpty(), filter.includeWarmups).count { it }
 
@@ -118,7 +123,7 @@ private fun FilterRow(options: List<String>, selected: String, onSelect: (String
 }
 
 @Composable
-private fun ExerciseSummaryRow(summary: ExerciseSummary, onClick: () -> Unit) {
+private fun ExerciseSummaryRow(summary: ExerciseSummary, displayName: String, onClick: () -> Unit) {
     val colors = MaterialTheme.colorScheme
     Surface(onClick = onClick, modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.large,
         color = colors.surfaceContainer) {
@@ -128,7 +133,7 @@ private fun ExerciseSummaryRow(summary: ExerciseSummary, onClick: () -> Unit) {
                 Icon(Icons.Rounded.FitnessCenter, contentDescription = null, modifier = Modifier.padding(10.dp).size(20.dp))
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text(WorkoutCatalog.displayName(summary.exerciseName), style = MaterialTheme.typography.titleMedium)
+                Text(displayName, style = MaterialTheme.typography.titleMedium)
                 val description = if (summary.workingSets == 0L) "Isınma kayıtları"
                     else "${summary.workingSets} çalışma seti · ${formatMetric(summary.volume)} kg hacim"
                 Text(description, color = colors.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
@@ -139,8 +144,13 @@ private fun ExerciseSummaryRow(summary: ExerciseSummary, onClick: () -> Unit) {
 }
 
 @Composable
-fun ExerciseHistoryScreen(name: String, viewModel: WorkoutViewModel, bottomSpace: Dp, onBack: () -> Unit) {
-    val historyFlow = remember(name, viewModel) { viewModel.exerciseHistory(name) }
+fun ExerciseHistoryScreen(name: String, exerciseId: String?, viewModel: WorkoutViewModel, bottomSpace: Dp, onBack: () -> Unit) {
+    val days by viewModel.days.collectAsStateWithLifecycle()
+    val displayName = remember(name, exerciseId, days) {
+        days.orEmpty().asSequence().flatMap { it.exercises.asSequence() }
+            .firstOrNull { it.id == exerciseId }?.displayName ?: WorkoutCatalog.displayName(name)
+    }
+    val historyFlow = remember(name, exerciseId, viewModel) { viewModel.exerciseHistory(name, exerciseId) }
     val history by historyFlow.collectAsStateWithLifecycle(null)
     var editingLog by remember { mutableStateOf<WorkoutLog?>(null) }
 
@@ -152,7 +162,7 @@ fun ExerciseHistoryScreen(name: String, viewModel: WorkoutViewModel, bottomSpace
             contentPadding = PaddingValues(start = 20.dp, top = 20.dp, end = 20.dp, bottom = 20.dp + bottomSpace),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            item { ScreenHeading(WorkoutCatalog.displayName(name)) }
+            item { ScreenHeading(displayName) }
             val detail = history
             when {
                 detail == null -> item { LinearProgressIndicator(Modifier.fillMaxWidth()) }

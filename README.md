@@ -30,11 +30,13 @@ Gimmer’da programındaki setleri ve öğünlerini kaydedebilir, hareket bazın
 
 | Bölüm | Neler yapabilirsin? |
 | --- | --- |
-| **Antrenman** | Programa göre hareket seç. Ağırlık, tekrar, RIR (yedekte kalan tekrar) ve not gir. Isınma ve çalışma setlerini ayrı kaydet. |
-| **Zamanlayıcı** | Set kaydında otomatik başlayan dinlenme sayacını elle de çalıştır. 90, 120 ve 180 saniye arasından seçim yap. |
+| **Antrenman** | Son ağırlık ve tekrar değerleriyle başla, artı ve eksi düğmeleriyle ayarla. Bar hareketlerinde plaka hesabını aç. Isınma ve çalışma setlerini ayrı kaydet. |
+| **Zamanlayıcı** | Bileşik hareketlerden sonra 180, izole hareketlerden sonra 90 saniye dinlen. Sayacı elle de başlatabilirsin. |
 | **Beslenme** | Öğün ve porsiyon kaydet. Kalori, protein, karbonhidrat ve yağ hedeflerini takip et. Ürün adı ya da barkodla ara veya besini elle gir. |
-| **Gelişim** | Aylık takvimden antrenman günlerini incele. Vücut ağırlığını kaydet ve her hareketin ağırlık ile tekrar grafiğine bak. |
+| **Gelişim** | Aylık antrenman takvimini ve hareket grafiklerini incele. Vücut ağırlığını ve gece uykunu kaydet. |
 | **Yedekleme** | Drive’a elle veya seçtiğin aralıkta yedekle, kayıtlı bir sürümü geri yükle veya JSON dosyasını istediğin klasöre kaydet. |
+
+Programını dışarıda düzenlemek için [program JSON’u rehberine](docs/program-json.md) bak.
 
 ## Kurulum
 

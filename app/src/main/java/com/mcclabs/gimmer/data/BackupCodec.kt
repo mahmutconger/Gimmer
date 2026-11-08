@@ -24,6 +24,7 @@ data class BackupSnapshot(
     val bodyweights: List<BodyweightLog>,
     val meals: List<LoggedMeal> = emptyList(),
     val dailyConditions: List<DailyCondition> = emptyList(),
+    val routine: List<WorkoutDay>? = null,
 )
 
 object BackupCodec {
@@ -34,6 +35,7 @@ object BackupCodec {
         meals: List<LoggedMeal> = emptyList(),
         zone: ZoneId = ZoneId.systemDefault(),
         dailyConditions: List<DailyCondition> = emptyList(),
+        routine: List<WorkoutDay>? = null,
     ): String {
         val sessions = logs.sortedWith(compareBy({ it.dateTimestamp }, { it.id })).map {
             gson.toJsonTree(it).asJsonObject.apply {
@@ -42,7 +44,8 @@ object BackupCodec {
         }
         return gson.toJson(mapOf("schemaVersion" to 3, "weightUnit" to "kg",
             "sessions" to sessions, "bodyweights" to bodyweights.sortedBy { it.date },
-            "nutrition" to exportNutrition(meals, zone), "dailyConditions" to dailyConditions.sortedBy { it.date }))
+            "nutrition" to exportNutrition(meals, zone), "dailyConditions" to dailyConditions.sortedBy { it.date },
+            "routine" to routine?.let(RoutineCodec::toJson)))
     }
 
     // V2 JSON backups remain importable; unknown legacy RIR is preserved as null.
@@ -93,7 +96,8 @@ object BackupCodec {
                 .also { it.requireValid() }
         }
         require(conditions.map { it.date }.distinct().size == conditions.size)
-        return BackupSnapshot(workouts, weights, meals, conditions)
+        val routine = root.get("routine")?.takeUnless { it.isJsonNull }?.asJsonObject?.let(RoutineCodec::decode)
+        return BackupSnapshot(workouts, weights, meals, conditions, routine)
     }
 
     fun decode(json: String): List<WorkoutLog> = decodeSnapshot(json).workouts

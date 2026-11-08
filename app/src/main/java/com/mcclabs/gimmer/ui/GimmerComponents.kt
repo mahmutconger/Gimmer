@@ -126,11 +126,13 @@ internal fun GimmerField(
     leadingIcon: (@Composable () -> Unit)? = null,
     keyboardActions: KeyboardActions = KeyboardActions.Default,
     trailingIcon: (@Composable () -> Unit)? = null,
+    enabled: Boolean = true,
 ) {
     val colors = MaterialTheme.colorScheme
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
+        enabled = enabled,
         label = { Text(label) },
         placeholder = placeholder?.let { hint -> { Text(hint) } },
         keyboardOptions = keyboardOptions,

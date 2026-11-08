@@ -40,21 +40,21 @@ Gelişim ekranındaki “Isınma setlerini göster” seçeneğiyle geçmişteki
 Vücut ağırlığı günde tek ölçümdür; tekrar kaydetmek bugünkü ölçümü günceller.
 Vücut ağırlığı grafiği en az iki farklı günün ölçümüyle görünür. Son yedi ölçüm metin olarak da sunulur.
 
-JSON dışa aktarma schemaVersion, weightUnit, sessions, bodyweights ve nutrition alanlarını içerir.
+JSON dışa aktarma schemaVersion, weightUnit, sessions, bodyweights, nutrition, dailyConditions ve routine alanlarını içerir.
 Ayarlar → Veri aktarımı → **JSON dosyasını indir** ile Android dosya seçicisinden kayıt konumu seçilebilir.
 Seanslarda RIR, ısınma bilgisi, not, kas bölgesi, gün, ISO UTC tarih ve epoch milisaniye bulunur.
 V2 JSON belgeleri de okunabilir. İçe aktarma 10 MB ile sınırlıdır.
 
 ## Sayaç ve arayüz
 
-Başarılı bir set kaydından sonra 90/120/180 saniyelik dinlenme sayacı başlar.
-Yeni set sayacı yeniden başlatır; aktifken süre seçmek yeni süreyle yeniden başlatır.
+Set kaydından sonra bileşik hareketlerde 180, izole hareketlerde 90 saniyelik dinlenme sayacı başlar.
+Elle başlatılan sayaç için 90, 120 ve 180 saniye seçilebilir.
 Sayaç monotonic elapsedRealtime son zamanını kullanır, sekme değişiminde ve döndürmede korunur.
 SavedStateHandle, Android'in kaydettiği etkinlik durumundan geri dönüşü destekler.
 Süre dolunca görsel bildirim ve destekleyen cihazda kısa titreşim oluşur.
 Arka plan servisi/alarm kullanılmaz; uygulama öldürülmüşken tam zamanında arka plan alarmı garanti edilmez.
 
-Uygulama Türkçe arayüz, Material 3 koyu tema ve İngilizce hareket adları kullanır.
+Uygulama Türkçe arayüz ve Material 3 koyu tema kullanır. Hazır hareketlerin görünen adları Türkçedir.
 Machine Chest Press, Lat Pulldown ve Hack Squat için Türkçe form adımları bulunur.
 Set/tekrar hedefleri önceki sürümdeki örnek program değerleridir.
 

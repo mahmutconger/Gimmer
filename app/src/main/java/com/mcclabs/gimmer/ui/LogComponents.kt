@@ -14,6 +14,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mcclabs.gimmer.data.WorkoutLog
 import com.mcclabs.gimmer.data.WorkoutCatalog
 import java.time.Instant
@@ -26,6 +27,7 @@ fun PerformanceFields(
     onWeight: (String) -> Unit, onReps: (String) -> Unit, onRir: (Int) -> Unit,
     onWarmup: (Boolean) -> Unit, onNote: (String) -> Unit,
     onPlateCalculator: (() -> Unit)? = null,
+    valuesEnabled: Boolean = true,
 ) {
     val numericWeight = parseWeight(weight) ?: 0.0
     val numericReps = reps.toIntOrNull()?.coerceIn(0, 10_000) ?: 0
@@ -36,13 +38,15 @@ fun PerformanceFields(
         keyboardType = KeyboardType.Decimal,
         decreaseLabel = "Ağırlığı 2,5 kg azalt", increaseLabel = "Ağırlığı 2,5 kg artır",
         trailingIcon = onPlateCalculator?.let { onClick ->
-            { IconButton(onClick = onClick) { Icon(Icons.Rounded.FitnessCenter, "Plaka hesaplayıcı") } }
-        })
+            { IconButton(onClick = onClick, enabled = valuesEnabled) { Icon(Icons.Rounded.FitnessCenter, "Plaka hesaplayıcı") } }
+        },
+        enabled = valuesEnabled)
     StepperInput("Tekrar", reps, onReps,
         onDecrease = { onReps((numericReps - 1).toString()) },
         onIncrease = { onReps((numericReps + 1).toString()) },
         decreaseEnabled = numericReps > 1, increaseEnabled = numericReps < 10_000,
-        keyboardType = KeyboardType.Number, decreaseLabel = "Tekrarı azalt", increaseLabel = "Tekrarı artır")
+        keyboardType = KeyboardType.Number, decreaseLabel = "Tekrarı azalt", increaseLabel = "Tekrarı artır",
+        enabled = valuesEnabled)
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         PillChip("Çalışma", !isWarmup, onClick = { onWarmup(false) })
         PillChip("Isınma", isWarmup, onClick = { onWarmup(true) })
@@ -94,6 +98,11 @@ fun LogRow(log: WorkoutLog, showContext: Boolean = false, onClick: () -> Unit) {
 
 @Composable
 fun EditLogDialog(log: WorkoutLog, viewModel: WorkoutViewModel, onDismiss: () -> Unit) {
+    val days by viewModel.days.collectAsStateWithLifecycle()
+    val displayName = remember(days, log.exerciseId, log.exerciseName) {
+        days.orEmpty().asSequence().flatMap { it.exercises.asSequence() }
+            .firstOrNull { it.id == log.exerciseId }?.displayName ?: WorkoutCatalog.displayName(log.exerciseName)
+    }
     var weight by rememberSaveable(log.id) { mutableStateOf(log.weight.toString()) }
     var reps by rememberSaveable(log.id) { mutableStateOf(log.reps.toString()) }
     var rir by rememberSaveable(log.id) { mutableStateOf(log.rir) }
@@ -106,7 +115,7 @@ fun EditLogDialog(log: WorkoutLog, viewModel: WorkoutViewModel, onDismiss: () ->
         AlertDialog(
             onDismissRequest = { if (!saving) deleting = false },
             title = { Text("Kayıt silinsin mi?") },
-            text = { Text("${WorkoutCatalog.displayName(log.exerciseName)} için bu set kaydı kalıcı olarak silinecek.") },
+            text = { Text("$displayName için bu set kaydı kalıcı olarak silinecek.") },
             confirmButton = {
                 Button(
                     enabled = !saving,
@@ -132,7 +141,7 @@ fun EditLogDialog(log: WorkoutLog, viewModel: WorkoutViewModel, onDismiss: () ->
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 Text("Kaydı düzenle", style = MaterialTheme.typography.headlineSmall)
-                Text(WorkoutCatalog.displayName(log.exerciseName), style = MaterialTheme.typography.titleMedium)
+                Text(displayName, style = MaterialTheme.typography.titleMedium)
                 Text(formatSessionDate(log.dateTimestamp), style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 if (log.sets > 1) {

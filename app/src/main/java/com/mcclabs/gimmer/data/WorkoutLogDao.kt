@@ -11,7 +11,7 @@ private const val HISTORY_FILTER = """
     AND (:includeWarmups OR isWarmup = 0)
 """
 
-data class ExerciseSummary(val exerciseName: String, val workingSets: Long, val volume: Double)
+data class ExerciseSummary(val exerciseName: String, val workingSets: Long, val volume: Double, val exerciseId: String? = null)
 
 data class WorkoutActivity(val dateTimestamp: Long, val sets: Int)
 
@@ -62,22 +62,25 @@ interface WorkoutLogDao {
     fun search(name: String, day: String, muscle: String, includeWarmups: Boolean = false): Flow<List<WorkoutLog>>
 
     @Query("""
-        SELECT exerciseName,
+        SELECT exerciseId, MIN(exerciseName) AS exerciseName,
             SUM(CASE WHEN isWarmup = 0 THEN sets ELSE 0 END) AS workingSets,
             SUM(CASE WHEN isWarmup = 0 THEN weight * reps * sets ELSE 0.0 END) AS volume
         FROM workout_logs
-        WHERE (:name = '' OR instr(lower(exerciseName), lower(:name)) > 0 OR exerciseName IN (:localizedMatches))
+        WHERE (:name = '' OR instr(lower(exerciseName), lower(:name)) > 0
+            OR exerciseName IN (:localizedMatches) OR exerciseId IN (:localizedIds))
         AND """ + HISTORY_FILTER + """
-        GROUP BY exerciseName
+        GROUP BY exerciseId, CASE WHEN exerciseId IS NULL THEN exerciseName END
         ORDER BY exerciseName COLLATE NOCASE, exerciseName
     """)
     fun observeSummaries(name: String, day: String, muscle: String, includeWarmups: Boolean,
-        localizedMatches: List<String> = emptyList()):
+        localizedMatches: List<String> = emptyList(), localizedIds: List<String> = emptyList()):
         Flow<List<ExerciseSummary>>
 
     @Query("""
-        SELECT * FROM workout_logs WHERE exerciseName = :name AND
+        SELECT * FROM workout_logs
+        WHERE (exerciseId = :exerciseId OR (:exerciseId IS NULL AND exerciseName = :name))
+        AND
     """ + HISTORY_FILTER + " ORDER BY dateTimestamp ASC, id ASC")
-    fun observeExercise(name: String, day: String, muscle: String, includeWarmups: Boolean):
+    fun observeExercise(name: String, day: String, muscle: String, includeWarmups: Boolean, exerciseId: String? = null):
         Flow<List<WorkoutLog>>
 }

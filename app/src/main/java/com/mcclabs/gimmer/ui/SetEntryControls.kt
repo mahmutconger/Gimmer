@@ -41,19 +41,20 @@ internal fun StepperInput(
     decreaseLabel: String,
     increaseLabel: String,
     trailingIcon: (@Composable () -> Unit)? = null,
+    enabled: Boolean = true,
 ) {
     Row(
         Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        FilledTonalIconButton(onClick = onDecrease, enabled = decreaseEnabled, modifier = Modifier.size(56.dp)) {
+        FilledTonalIconButton(onClick = onDecrease, enabled = enabled && decreaseEnabled, modifier = Modifier.size(56.dp)) {
             Icon(Icons.Rounded.Remove, decreaseLabel)
         }
         GimmerField(value, { if (it.length <= 10) onChange(it) }, label = label,
             modifier = Modifier.weight(1f), keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-            trailingIcon = trailingIcon)
-        FilledTonalIconButton(onClick = onIncrease, enabled = increaseEnabled, modifier = Modifier.size(56.dp)) {
+            trailingIcon = trailingIcon, enabled = enabled)
+        FilledTonalIconButton(onClick = onIncrease, enabled = enabled && increaseEnabled, modifier = Modifier.size(56.dp)) {
             Icon(Icons.Rounded.Add, increaseLabel)
         }
     }

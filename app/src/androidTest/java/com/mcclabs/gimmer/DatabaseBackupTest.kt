@@ -14,6 +14,35 @@ import java.time.ZoneId
 import java.util.UUID
 
 class DatabaseBackupTest {
+    @Test fun routineReplacementAndRestoreLeaveTheWorkoutHistoryIntact() = runBlocking {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val source = Room.inMemoryDatabaseBuilder(context, WorkoutDatabase::class.java).build()
+        val target = Room.inMemoryDatabaseBuilder(context, WorkoutDatabase::class.java).build()
+        try {
+            val from = WorkoutRepository(context, source)
+            val into = WorkoutRepository(context, target)
+            val day = WorkoutCatalog.days.first()
+            val updated = listOf(day.copy(exercises = day.exercises.take(1), programName = "Yeni program"))
+            val exercise = day.exercises.first()
+            from.save(WorkoutLog(exerciseName = exercise.name, exerciseId = exercise.id,
+                weight = 55.0, sets = 1, reps = 8, dateTimestamp = 1794000000000))
+            from.replaceRoutine(updated)
+            assertTrue(runCatching { from.replaceRoutine(emptyList()) }.isFailure)
+            assertEquals(updated, from.routine.first())
+            assertEquals(55.0, from.latestSet(exercise)!!.weight, 0.0)
+            assertEquals(updated, BackupCodec.decodeSnapshot(from.exportAsJson()).routine)
+            val bytes = requireNotNull(from.exportNonEmptyDatabase())
+            assertEquals(2, into.restoreDatabase(bytes))
+            assertEquals(updated, into.routine.first())
+            into.replaceRoutine(listOf(day))
+            assertEquals(0, into.restoreDatabase(bytes))
+            assertEquals(listOf(day), into.routine.first())
+        } finally {
+            source.close()
+            target.close()
+        }
+    }
+
     @Test fun sleepOnlyBackupRestoresAndPreservesTheLocalValueForTheSameDay() = runBlocking {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val source = Room.inMemoryDatabaseBuilder(context, WorkoutDatabase::class.java).build()

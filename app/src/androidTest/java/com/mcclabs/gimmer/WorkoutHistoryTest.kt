@@ -48,6 +48,11 @@ class WorkoutHistoryTest {
                 weight = 60.0, dateTimestamp = 300))
             dao.insert(set.copy(exerciseId = "other_pulldown", weight = 70.0, dateTimestamp = 400))
             assertEquals(SetValues(60.0, 10), dao.latestSet("lat_pulldown", "Lat Pulldown"))
+            val tracked = dao.observeSummaries("görünen ad", "", "", true,
+                localizedIds = listOf("lat_pulldown")).first().single()
+            assertEquals("lat_pulldown", tracked.exerciseId)
+            assertEquals(60.0, dao.observeExercise(tracked.exerciseName, "", "", true,
+                tracked.exerciseId).first().single().weight, 0.0)
         } finally {
             database.close()
         }

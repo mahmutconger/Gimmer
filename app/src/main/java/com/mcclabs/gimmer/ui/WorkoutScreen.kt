@@ -50,9 +50,15 @@ import java.time.ZoneId
 
 @Composable
 fun WorkoutScreen(viewModel: WorkoutViewModel, bottomSpace: Dp) {
-    var selectedDayIndex by rememberSaveable { mutableIntStateOf(0) }
+    val activeDays by viewModel.days.collectAsStateWithLifecycle()
+    val days = activeDays
+    if (days == null) {
+        LinearProgressIndicator(Modifier.fillMaxWidth())
+        return
+    }
+    var selectedDayId by rememberSaveable { mutableStateOf<String?>(null) }
     var expandedExercise by rememberSaveable { mutableStateOf<String?>(null) }
-    val day = viewModel.days[selectedDayIndex]
+    val day = days.firstOrNull { it.id == selectedDayId } ?: days.first()
     val listState = rememberLazyListState()
     var infoExercise by remember { mutableStateOf<Exercise?>(null) }
     var editingLog by remember { mutableStateOf<WorkoutLog?>(null) }
@@ -79,10 +85,10 @@ fun WorkoutScreen(viewModel: WorkoutViewModel, bottomSpace: Dp) {
             modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 20.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            viewModel.days.forEachIndexed { index, item ->
-                PillChip(item.name, selectedDayIndex == index, onClick = {
-                    if (selectedDayIndex != index) {
-                        selectedDayIndex = index
+            days.forEach { item ->
+                PillChip(item.name, day.id == item.id, onClick = {
+                    if (day.id != item.id) {
+                        selectedDayId = item.id
                         expandedExercise = null
                         listState.requestScrollToItem(0)
                     }
@@ -170,11 +176,16 @@ private fun WorkoutExerciseCard(
     var weightDraft by rememberSaveable { mutableStateOf<String?>(null) }
     var repsDraft by rememberSaveable { mutableStateOf<String?>(null) }
     var lastSet by remember { mutableStateOf<SetValues?>(null) }
+    var loadingLastSet by remember { mutableStateOf(true) }
     var showPlates by rememberSaveable { mutableStateOf(false) }
     val weight = weightDraft ?: lastSet?.weight?.let(::inputWeight).orEmpty()
     val reps = repsDraft ?: lastSet?.reps?.toString().orEmpty()
     LaunchedEffect(expanded, exercise.id, exercise.name) {
-        if (expanded) lastSet = viewModel.latestSet(exercise)
+        loadingLastSet = true
+        if (expanded) {
+            lastSet = viewModel.latestSet(exercise)
+            loadingLastSet = false
+        }
     }
     var rir by rememberSaveable { mutableIntStateOf(2) }
     var isWarmup by rememberSaveable { mutableStateOf(false) }
@@ -246,9 +257,10 @@ private fun WorkoutExerciseCard(
                 }
                 PerformanceFields(weight, reps, rir, isWarmup, note, { weightDraft = it }, { repsDraft = it },
                     { rir = it }, { isWarmup = it }, { note = it },
-                    onPlateCalculator = if (exercise.isBarbell) ({ showPlates = true }) else null)
+                    onPlateCalculator = if (exercise.isBarbell) ({ showPlates = true }) else null,
+                    valuesEnabled = !loadingLastSet)
                 Button(
-                    enabled = !saving && validPerformance(weight, reps),
+                    enabled = !saving && !loadingLastSet && validPerformance(weight, reps),
                     onClick = {
                         saving = true
                         val saved = SetValues(requireNotNull(parseWeight(weight)), reps.toInt())

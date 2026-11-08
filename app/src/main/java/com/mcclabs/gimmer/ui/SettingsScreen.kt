@@ -36,6 +36,7 @@ fun SettingsScreen(viewModel: WorkoutViewModel, bottomSpace: Dp) {
     ) {
         ScreenHeading("Ayarlar", "Verilerini yedekle ve dışa aktar.")
         DriveSettings(viewModel)
+        RoutineSettings(viewModel)
         SettingsCard("Veri aktarımı", "Antrenman, beslenme ve vücut ağırlığı geçmişini dışa aktar.") {
             Button(
                 onClick = { createDocument.launch("gimmer-yedek-${LocalDate.now()}.json") },

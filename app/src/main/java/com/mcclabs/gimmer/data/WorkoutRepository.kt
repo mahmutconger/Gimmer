@@ -7,6 +7,8 @@ import androidx.room.withTransaction
 import com.mcclabs.gimmer.nutrition.NutritionRepository
 import java.io.File
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
 class WorkoutRepository(private val context: Context,
@@ -15,15 +17,20 @@ class WorkoutRepository(private val context: Context,
     private val weightDao = database.bodyweightDao()
     private val nutrition = NutritionRepository(database)
     private val conditionDao = database.dailyConditionDao()
+    private val routineDao = database.workoutRoutineDao()
     val bodyweights = weightDao.observeAll()
+    val routine = routineDao.observe()
+        .map { it?.let { record -> RoutineCodec.decode(record.json) } ?: WorkoutCatalog.days }
+        .flowOn(Dispatchers.Default)
     fun workoutLogs(exercise: Exercise, day: String, start: Long, end: Long) =
         dao.observeWorkoutLogs(exercise.name, day, start, end, exercise.id)
     suspend fun latestSet(exercise: Exercise) = dao.latestSet(exercise.id, exercise.name)
     fun activity(start: Long, end: Long) = dao.observeActivity(start, end)
-    fun summaries(name: String, day: String, muscle: String, includeWarmups: Boolean, localizedMatches: List<String>) =
-        dao.observeSummaries(name, day, muscle, includeWarmups, localizedMatches)
-    fun exerciseLogs(name: String, day: String, muscle: String, includeWarmups: Boolean) =
-        dao.observeExercise(name, day, muscle, includeWarmups)
+    fun summaries(name: String, day: String, muscle: String, includeWarmups: Boolean, localizedMatches: List<Exercise>) =
+        dao.observeSummaries(name, day, muscle, includeWarmups,
+            localizedMatches.map { it.name }.distinct(), localizedMatches.map { it.id }.distinct())
+    fun exerciseLogs(name: String, day: String, muscle: String, includeWarmups: Boolean, exerciseId: String?) =
+        dao.observeExercise(name, day, muscle, includeWarmups, exerciseId)
     suspend fun save(log: WorkoutLog) { requireValidLog(log); dao.insert(log) }
     suspend fun update(log: WorkoutLog) { requireValidLog(log); dao.update(log) }
     suspend fun delete(log: WorkoutLog) = dao.delete(log)
@@ -33,13 +40,18 @@ class WorkoutRepository(private val context: Context,
         condition.requireValid()
         conditionDao.upsert(condition)
     }
+    suspend fun replaceRoutine(days: List<WorkoutDay>) {
+        val document = withContext(Dispatchers.Default) { RoutineCodec.toJson(days).also { RoutineCodec.decode(it) } }
+        routineDao.replace(WorkoutRoutine(json = document.toString()))
+    }
 
     private suspend fun snapshot(): BackupSnapshot = database.withTransaction {
         database.readSnapshot()
     }
     suspend fun exportAsJson(): String = withContext(Dispatchers.IO) {
         val data = snapshot()
-        BackupCodec.encode(data.workouts, data.bodyweights, data.meals, dailyConditions = data.dailyConditions)
+        BackupCodec.encode(data.workouts, data.bodyweights, data.meals,
+            dailyConditions = data.dailyConditions, routine = data.routine)
     }
 
     private suspend fun merge(data: BackupSnapshot): Int {
@@ -55,7 +67,11 @@ class WorkoutRepository(private val context: Context,
             weightDao.insertMissing(newWeights)
             val newMeals = nutrition.merge(data.meals)
             val newConditions = conditionDao.insertMissing(data.dailyConditions).count { it != -1L }
-            newLogs.size + newWeights.size + newMeals + newConditions
+            val newRoutine = if (data.routine != null && routineDao.get() == null) {
+                routineDao.replace(WorkoutRoutine(json = RoutineCodec.toJson(data.routine).toString()))
+                1
+            } else 0
+            newLogs.size + newWeights.size + newMeals + newConditions + newRoutine
         }
     }
     suspend fun restore(json: String): Int = withContext(Dispatchers.IO) {
@@ -70,7 +86,7 @@ class WorkoutRepository(private val context: Context,
     private suspend fun exportDatabase(skipEmpty: Boolean): ByteArray? = withContext(Dispatchers.IO) {
         val data = snapshot()
         if (skipEmpty && data.workouts.isEmpty() && data.bodyweights.isEmpty() &&
-            data.meals.isEmpty() && data.dailyConditions.isEmpty()) {
+            data.meals.isEmpty() && data.dailyConditions.isEmpty() && data.routine == null) {
             return@withContext null
         }
         withTemporaryDatabase { backup, file ->
@@ -79,6 +95,9 @@ class WorkoutRepository(private val context: Context,
                 data.bodyweights.forEach { backup.bodyweightDao().upsert(it) }
                 NutritionRepository(backup).merge(data.meals)
                 backup.dailyConditionDao().insertMissing(data.dailyConditions)
+                data.routine?.let {
+                    backup.workoutRoutineDao().replace(WorkoutRoutine(json = RoutineCodec.toJson(it).toString()))
+                }
             }
             backup.close()
             require(file.length() <= MAX_BACKUP_BYTES)
@@ -100,6 +119,7 @@ class WorkoutRepository(private val context: Context,
 
     private suspend fun WorkoutDatabase.readSnapshot() = BackupSnapshot(
         workoutLogDao().getAll(), bodyweightDao().getAll(), nutritionDao().allMeals(), dailyConditionDao().getAll(),
+        workoutRoutineDao().get()?.json?.let(RoutineCodec::decode),
     )
 
     private suspend fun <T> withTemporaryDatabase(bytes: ByteArray? = null,
