@@ -1,5 +1,7 @@
 # Gimmer’a katkıda bulunma
 
+**Türkçe** · [English](CONTRIBUTING.en.md)
+
 Kurulum ve geliştirme ortamı için [README](README.md) dosyasına bak.
 
 ## Değişikliğe başlama

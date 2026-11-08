@@ -1,5 +1,7 @@
 # Gimmer kurulum ve veri rehberi
 
+**Türkçe** · [English](PREMIUM_SETUP.en.md)
+
 ## Google Drive kurulumu
 
 1. Google Cloud projesinde Google Drive API hizmetini etkinleştirin.

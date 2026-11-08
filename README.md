@@ -4,6 +4,8 @@
 
 <h1 align="center">Gimmer</h1>
 
+<p align="center"><strong>Türkçe</strong> · <a href="README.en.md">English</a></p>
+
 <p align="center">
   Android için antrenman ve beslenme günlüğü.
 </p>

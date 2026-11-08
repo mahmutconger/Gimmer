@@ -1,5 +1,7 @@
 # Antrenman programı JSON’u
 
+**Türkçe** · [English](program-json.en.md)
+
 **Ayarlar → Antrenman programı → Program JSON’unu kopyala** seçeneği etkin programı panoya aktarır. Düzenlenen metni **Program JSON’u içe aktar** ekranına yapıştır, günleri önizle ve **Programı değiştir** düğmesiyle onayla.
 
 ```json
