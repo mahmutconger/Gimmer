@@ -14,6 +14,7 @@ class WorkoutRepository(private val context: Context,
     private val dao = database.workoutLogDao()
     private val weightDao = database.bodyweightDao()
     private val nutrition = NutritionRepository(database)
+    private val conditionDao = database.dailyConditionDao()
     val bodyweights = weightDao.observeAll()
     fun workoutLogs(exercise: Exercise, day: String, start: Long, end: Long) =
         dao.observeWorkoutLogs(exercise.name, day, start, end, exercise.id)
@@ -27,18 +28,24 @@ class WorkoutRepository(private val context: Context,
     suspend fun update(log: WorkoutLog) { requireValidLog(log); dao.update(log) }
     suspend fun delete(log: WorkoutLog) = dao.delete(log)
     suspend fun saveBodyweight(log: BodyweightLog) { requireValidBodyweight(log); weightDao.upsert(log) }
+    fun dailyCondition(date: String) = conditionDao.observe(date)
+    suspend fun saveDailyCondition(condition: DailyCondition) {
+        condition.requireValid()
+        conditionDao.upsert(condition)
+    }
 
     private suspend fun snapshot(): BackupSnapshot = database.withTransaction {
         database.readSnapshot()
     }
     suspend fun exportAsJson(): String = withContext(Dispatchers.IO) {
         val data = snapshot()
-        BackupCodec.encode(data.workouts, data.bodyweights, data.meals)
+        BackupCodec.encode(data.workouts, data.bodyweights, data.meals, dailyConditions = data.dailyConditions)
     }
 
     private suspend fun merge(data: BackupSnapshot): Int {
         data.workouts.forEach(::requireValidLog)
         data.bodyweights.forEach(::requireValidBodyweight)
+        data.dailyConditions.forEach { it.requireValid() }
         return database.withTransaction {
             val existing = dao.getAll().map { it.copy(id = 0) }.toMutableSet()
             val newLogs = data.workouts.map { it.copy(id = 0) }.filter { existing.add(it) }
@@ -47,7 +54,8 @@ class WorkoutRepository(private val context: Context,
             dao.insertAll(newLogs)
             weightDao.insertMissing(newWeights)
             val newMeals = nutrition.merge(data.meals)
-            newLogs.size + newWeights.size + newMeals
+            val newConditions = conditionDao.insertMissing(data.dailyConditions).count { it != -1L }
+            newLogs.size + newWeights.size + newMeals + newConditions
         }
     }
     suspend fun restore(json: String): Int = withContext(Dispatchers.IO) {
@@ -61,7 +69,8 @@ class WorkoutRepository(private val context: Context,
     // Build a closed, standalone SQLite snapshot; never copy a live WAL database file.
     private suspend fun exportDatabase(skipEmpty: Boolean): ByteArray? = withContext(Dispatchers.IO) {
         val data = snapshot()
-        if (skipEmpty && data.workouts.isEmpty() && data.bodyweights.isEmpty() && data.meals.isEmpty()) {
+        if (skipEmpty && data.workouts.isEmpty() && data.bodyweights.isEmpty() &&
+            data.meals.isEmpty() && data.dailyConditions.isEmpty()) {
             return@withContext null
         }
         withTemporaryDatabase { backup, file ->
@@ -69,6 +78,7 @@ class WorkoutRepository(private val context: Context,
                 backup.workoutLogDao().insertAll(data.workouts)
                 data.bodyweights.forEach { backup.bodyweightDao().upsert(it) }
                 NutritionRepository(backup).merge(data.meals)
+                backup.dailyConditionDao().insertMissing(data.dailyConditions)
             }
             backup.close()
             require(file.length() <= MAX_BACKUP_BYTES)
@@ -89,7 +99,7 @@ class WorkoutRepository(private val context: Context,
     }
 
     private suspend fun WorkoutDatabase.readSnapshot() = BackupSnapshot(
-        workoutLogDao().getAll(), bodyweightDao().getAll(), nutritionDao().allMeals(),
+        workoutLogDao().getAll(), bodyweightDao().getAll(), nutritionDao().allMeals(), dailyConditionDao().getAll(),
     )
 
     private suspend fun <T> withTemporaryDatabase(bytes: ByteArray? = null,

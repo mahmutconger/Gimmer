@@ -14,6 +14,28 @@ import java.time.ZoneId
 import java.util.UUID
 
 class DatabaseBackupTest {
+    @Test fun sleepOnlyBackupRestoresAndPreservesTheLocalValueForTheSameDay() = runBlocking {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val source = Room.inMemoryDatabaseBuilder(context, WorkoutDatabase::class.java).build()
+        val target = Room.inMemoryDatabaseBuilder(context, WorkoutDatabase::class.java).build()
+        try {
+            val from = WorkoutRepository(context, source)
+            val into = WorkoutRepository(context, target)
+            val condition = DailyCondition("2026-11-08", 450)
+            from.saveDailyCondition(condition)
+            assertEquals(listOf(condition), BackupCodec.decodeSnapshot(from.exportAsJson()).dailyConditions)
+            val bytes = requireNotNull(from.exportNonEmptyDatabase())
+            assertEquals(1, into.restoreDatabase(bytes))
+            assertEquals(condition, target.dailyConditionDao().getAll().single())
+            into.saveDailyCondition(condition.copy(sleepMinutes = 420))
+            assertEquals(0, into.restoreDatabase(bytes))
+            assertEquals(420, target.dailyConditionDao().getAll().single().sleepMinutes)
+        } finally {
+            source.close()
+            target.close()
+        }
+    }
+
     @Test fun closedSqliteBackupRestoresBothTablesAndMergesWithoutDuplicates() = runBlocking {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val source = Room.inMemoryDatabaseBuilder(context, WorkoutDatabase::class.java).build()

@@ -155,6 +155,11 @@ class WorkoutViewModel(application: Application, savedState: SavedStateHandle) :
         repository.saveBodyweight(BodyweightLog(LocalDate.now().toString(), weight))
         onSaved()
     }
+    fun dailyCondition(date: LocalDate) = repository.dailyCondition(date.toString())
+
+    fun saveSleep(date: LocalDate, minutes: Int) = perform("Gece uykusu kaydedildi.") {
+        repository.saveDailyCondition(DailyCondition(date.toString(), minutes))
+    }
     fun updateLog(log: WorkoutLog, onSaved: () -> Unit) = perform("Kayıt güncellendi.") {
         repository.update(log); onSaved()
     }

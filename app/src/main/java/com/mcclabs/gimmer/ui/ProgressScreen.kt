@@ -36,6 +36,7 @@ fun ProgressScreen(viewModel: WorkoutViewModel, bottomSpace: Dp, onExercise: (St
     ) {
         item { ScreenHeading("Gelişim", "Ölçümlerini ve set geçmişini takip et.") }
         item { ActivityCalendar(viewModel) }
+        item { DailyConditionCard(viewModel) }
         item { BodyweightSection(bodyweights, viewModel) }
         item {
             Column(Modifier.padding(top = 6.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
