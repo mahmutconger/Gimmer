@@ -3,10 +3,10 @@ package com.mcclabs.gimmer.ui
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.FitnessCenter
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -15,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.mcclabs.gimmer.data.WorkoutLog
+import com.mcclabs.gimmer.data.WorkoutCatalog
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -24,15 +25,24 @@ fun PerformanceFields(
     weight: String, reps: String, rir: Int?, isWarmup: Boolean, note: String,
     onWeight: (String) -> Unit, onReps: (String) -> Unit, onRir: (Int) -> Unit,
     onWarmup: (Boolean) -> Unit, onNote: (String) -> Unit,
+    onPlateCalculator: (() -> Unit)? = null,
 ) {
-    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        GimmerField(weight, { if (it.length <= 10) onWeight(it) }, label = "Ağırlık (kg)",
-            placeholder = "Örn. 50", modifier = Modifier.weight(1f),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal))
-        GimmerField(reps, { if (it.length <= 10) onReps(it) }, label = "Tekrar",
-            placeholder = "Örn. 8", modifier = Modifier.weight(1f),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number))
-    }
+    val numericWeight = parseWeight(weight) ?: 0.0
+    val numericReps = reps.toIntOrNull()?.coerceIn(0, 10_000) ?: 0
+    StepperInput("Ağırlık (kg)", weight, onWeight,
+        onDecrease = { onWeight(stepWeight(weight, -2.5)) },
+        onIncrease = { onWeight(stepWeight(weight, 2.5)) },
+        decreaseEnabled = numericWeight > 0, increaseEnabled = numericWeight < 10_000,
+        keyboardType = KeyboardType.Decimal,
+        decreaseLabel = "Ağırlığı 2,5 kg azalt", increaseLabel = "Ağırlığı 2,5 kg artır",
+        trailingIcon = onPlateCalculator?.let { onClick ->
+            { IconButton(onClick = onClick) { Icon(Icons.Rounded.FitnessCenter, "Plaka hesaplayıcı") } }
+        })
+    StepperInput("Tekrar", reps, onReps,
+        onDecrease = { onReps((numericReps - 1).toString()) },
+        onIncrease = { onReps((numericReps + 1).toString()) },
+        decreaseEnabled = numericReps > 1, increaseEnabled = numericReps < 10_000,
+        keyboardType = KeyboardType.Number, decreaseLabel = "Tekrarı azalt", increaseLabel = "Tekrarı artır")
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         PillChip("Çalışma", !isWarmup, onClick = { onWarmup(false) })
         PillChip("Isınma", isWarmup, onClick = { onWarmup(true) })
@@ -52,9 +62,7 @@ fun PerformanceFields(
 }
 
 internal fun validPerformance(weight: String, reps: String): Boolean {
-    val parsedWeight = weight.replace(',', '.').toDoubleOrNull() ?: return false
-    return parsedWeight.isFinite() && parsedWeight in 0.0..10000.0 &&
-        (reps.toIntOrNull() ?: 0) in 1..10000
+    return parseWeight(weight) != null && (reps.toIntOrNull() ?: 0) in 1..10000
 }
 
 @Composable
@@ -98,7 +106,7 @@ fun EditLogDialog(log: WorkoutLog, viewModel: WorkoutViewModel, onDismiss: () ->
         AlertDialog(
             onDismissRequest = { if (!saving) deleting = false },
             title = { Text("Kayıt silinsin mi?") },
-            text = { Text("${log.exerciseName} için bu set kaydı kalıcı olarak silinecek.") },
+            text = { Text("${WorkoutCatalog.displayName(log.exerciseName)} için bu set kaydı kalıcı olarak silinecek.") },
             confirmButton = {
                 Button(
                     enabled = !saving,
@@ -124,7 +132,7 @@ fun EditLogDialog(log: WorkoutLog, viewModel: WorkoutViewModel, onDismiss: () ->
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
                 Text("Kaydı düzenle", style = MaterialTheme.typography.headlineSmall)
-                Text(log.exerciseName, style = MaterialTheme.typography.titleMedium)
+                Text(WorkoutCatalog.displayName(log.exerciseName), style = MaterialTheme.typography.titleMedium)
                 Text(formatSessionDate(log.dateTimestamp), style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 if (log.sets > 1) {

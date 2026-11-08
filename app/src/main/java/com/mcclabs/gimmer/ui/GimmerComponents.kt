@@ -125,6 +125,7 @@ internal fun GimmerField(
     maxLines: Int = 1,
     leadingIcon: (@Composable () -> Unit)? = null,
     keyboardActions: KeyboardActions = KeyboardActions.Default,
+    trailingIcon: (@Composable () -> Unit)? = null,
 ) {
     val colors = MaterialTheme.colorScheme
     OutlinedTextField(
@@ -137,6 +138,7 @@ internal fun GimmerField(
         singleLine = singleLine,
         maxLines = maxLines,
         leadingIcon = leadingIcon,
+        trailingIcon = trailingIcon,
         modifier = modifier,
         shape = MaterialTheme.shapes.medium,
         colors = OutlinedTextFieldDefaults.colors(

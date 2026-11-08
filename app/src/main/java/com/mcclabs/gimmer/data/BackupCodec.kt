@@ -16,6 +16,7 @@ fun requireValidLog(log: WorkoutLog) {
     require(log.sets in 1..1000 && log.reps in 1..10000)
     require(log.rir == null || log.rir in 0..4)
     require(log.dateTimestamp > 0 && (log.note?.length ?: 0) <= 2000)
+    require(log.exerciseId == null || log.exerciseId.length in 1..80)
 }
 
 data class BackupSnapshot(
@@ -52,11 +53,13 @@ object BackupCodec {
         require(sessions.size() <= 50000)
         val workouts = sessions.map { element ->
             val row = element.asJsonObject
+            val exerciseName = row.get("exerciseName").asString
+            val catalogExercise = WorkoutCatalog.exercisesByName[exerciseName]
             val warmup = if (version == 3) row.get("isWarmup").also {
                 require(it.isJsonPrimitive && it.asJsonPrimitive.isBoolean)
             }.asBoolean else false
             WorkoutLog(
-                exerciseName = row.get("exerciseName").asString,
+                exerciseName = exerciseName,
                 muscleGroup = row.get("muscleGroup").asString,
                 dayName = row.get("dayName").asString,
                 weight = row.get("weight").asDouble,
@@ -67,6 +70,9 @@ object BackupCodec {
                 rir = if (version == 3) row.get("rir")?.takeUnless { it.isJsonNull }
                     ?.asBigDecimal?.intValueExact() else null,
                 dateTimestamp = row.get("dateTimestamp").asBigDecimal.longValueExact(),
+                exerciseId = row.get("exerciseId")?.let { if (it.isJsonNull) null else it.asString }
+                    ?: catalogExercise?.id.takeIf { !row.has("exerciseId") },
+                isCompound = row.get("isCompound")?.asBoolean ?: catalogExercise?.isCompound ?: false,
             ).also(::requireValidLog)
         }
         val bodyweights = if (version == 3) root.getAsJsonArray("bodyweights") else JsonArray()

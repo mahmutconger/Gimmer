@@ -2,6 +2,7 @@ package com.mcclabs.gimmer.ui
 
 import android.os.SystemClock
 import androidx.lifecycle.SavedStateHandle
+import com.mcclabs.gimmer.data.Exercise
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -13,6 +14,8 @@ import kotlinx.coroutines.launch
 
 internal fun remainingRestSeconds(deadline: Long, now: Long): Int =
     ((deadline - now).coerceAtLeast(0) + 999).div(1000).coerceAtMost(180).toInt()
+
+internal fun restSecondsFor(isCompound: Boolean): Int = if (isCompound) 180 else 90
 
 class RestTimer(
     private val savedState: SavedStateHandle,
@@ -26,6 +29,8 @@ class RestTimer(
     val finished = _finished.asStateFlow()
     val active = remaining.map { it > 0 }.distinctUntilChanged()
     val preset = savedState.getStateFlow("restPreset", 120)
+    val duration = savedState.getStateFlow("restDuration", preset.value)
+    val exerciseName = savedState.getStateFlow<String?>("restExerciseName", null)
 
     init {
         scope.launch {
@@ -54,22 +59,31 @@ class RestTimer(
 
     fun selectPreset(seconds: Int) {
         require(seconds in presets)
-        if (seconds == preset.value) return
+        if (seconds == preset.value && (_remaining.value == 0 || seconds == duration.value)) return
         savedState["restPreset"] = seconds
         if (_remaining.value > 0) start()
         else _finished.value = false
     }
 
-    fun start() {
+    fun start() = start(preset.value, null)
+
+    fun startFor(exercise: Exercise) = start(restSecondsFor(exercise.isCompound), exercise.displayName)
+
+    fun restart() = start(duration.value, exerciseName.value)
+
+    private fun start(seconds: Int, name: String?) {
         _finished.value = false
-        savedState["restDeadline"] = SystemClock.elapsedRealtime() + preset.value * 1000L
-        _remaining.value = preset.value
+        savedState["restDuration"] = seconds
+        savedState["restExerciseName"] = name
+        savedState["restDeadline"] = SystemClock.elapsedRealtime() + seconds * 1000L
+        _remaining.value = seconds
     }
 
     fun cancel() {
         savedState["restDeadline"] = 0L
         _remaining.value = 0
         _finished.value = false
+        savedState["restExerciseName"] = null
     }
 
     companion object {

@@ -2,8 +2,12 @@ package com.mcclabs.gimmer
 
 import com.mcclabs.gimmer.data.WorkoutLog
 import com.mcclabs.gimmer.ui.DailyExerciseProgress
+import com.mcclabs.gimmer.ui.PlateCount
+import com.mcclabs.gimmer.ui.calculatePlateLoad
 import com.mcclabs.gimmer.ui.dailyExerciseProgress
 import com.mcclabs.gimmer.ui.remainingRestSeconds
+import com.mcclabs.gimmer.ui.restSecondsFor
+import com.mcclabs.gimmer.ui.stepWeight
 import com.mcclabs.gimmer.ui.workingSetVolume
 import java.time.Instant
 import java.time.LocalDate
@@ -12,6 +16,25 @@ import org.junit.Assert.*
 import org.junit.Test
 
 class SetTrackingTest {
+    @Test fun plateLoadingUsesBothSidesAndNeverExceedsTheTarget() {
+        val load = requireNotNull(calculatePlateLoad(83.1))
+        assertEquals(82.5, load.totalWeight, 0.0)
+        assertEquals(listOf(PlateCount(20.0, 1), PlateCount(10.0, 1), PlateCount(1.25, 1)), load.plates)
+        assertTrue(requireNotNull(calculatePlateLoad(20.0)).plates.isEmpty())
+        assertNull(calculatePlateLoad(19.99))
+    }
+
+    @Test fun stepperKeepsTurkishDecimalsAndRespectsWeightLimits() {
+        assertEquals("52,5", stepWeight("50", 2.5))
+        assertEquals("0", stepWeight("1,25", -2.5))
+        assertEquals("10000", stepWeight("9999", 2.5))
+    }
+
+    @Test fun autoRestUsesTheMovementCategory() {
+        assertEquals(180, restSecondsFor(true))
+        assertEquals(90, restSecondsFor(false))
+    }
+
     @Test fun warmupVolumeNeverInflatesWorkingStats() {
         val set = WorkoutLog(exerciseName = "Machine Chest Press", weight = 50.0,
             sets = 1, reps = 10, rir = 2, dateTimestamp = 100)

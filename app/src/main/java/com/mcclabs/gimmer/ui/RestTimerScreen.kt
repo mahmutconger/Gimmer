@@ -24,6 +24,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 fun RestTimerScreen(timer: RestTimer, bottomSpace: Dp) {
     val remaining by timer.remaining.collectAsStateWithLifecycle()
     val preset by timer.preset.collectAsStateWithLifecycle()
+    val duration by timer.duration.collectAsStateWithLifecycle()
+    val exerciseName by timer.exerciseName.collectAsStateWithLifecycle()
     val finished by timer.finished.collectAsStateWithLifecycle()
     val active = remaining > 0
     val seconds = if (active || finished) remaining else preset
@@ -54,10 +56,13 @@ fun RestTimerScreen(timer: RestTimer, bottomSpace: Dp) {
                     style = MaterialTheme.typography.titleMedium,
                     color = colors.primary,
                 )
+                if (active || finished) exerciseName?.let {
+                    Text(it, style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
+                }
                 BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     val ringSize = minOf(216.dp * LocalDensity.current.fontScale, maxWidth)
                     CircularProgressIndicator(
-                        progress = { if (finished) 0f else seconds.toFloat() / preset },
+                        progress = { if (finished) 0f else seconds.toFloat() / (if (active) duration else preset) },
                         modifier = Modifier.size(ringSize),
                         color = colors.primary,
                         trackColor = colors.surfaceContainerHighest,
@@ -70,7 +75,7 @@ fun RestTimerScreen(timer: RestTimer, bottomSpace: Dp) {
                     )
                 }
                 Button(
-                    onClick = timer::start,
+                    onClick = { if (active || finished) timer.restart() else timer.start() },
                     modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
                 ) {
                     Icon(if (active || finished) Icons.Rounded.RestartAlt else Icons.Rounded.PlayArrow,
@@ -86,16 +91,16 @@ fun RestTimerScreen(timer: RestTimer, bottomSpace: Dp) {
             }
         }
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            SectionTitle("Dinlenme süresi")
+            SectionTitle("Elle seçilen süre")
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                RestTimer.presets.forEach { duration ->
-                    PillChip(formatTime(duration), selected = preset == duration,
-                        onClick = { timer.selectPreset(duration) })
+                RestTimer.presets.forEach { option ->
+                    PillChip(formatTime(option), selected = (if (active) duration else preset) == option,
+                        onClick = { timer.selectPreset(option) })
                 }
             }
             Text(
                 if (active) "Süreyi değiştirirsen sayaç yeniden başlar."
-                else "Yeni bir set kaydettiğinde sayaç otomatik başlar.",
+                else "Set kaydedince bileşik hareketlerde 3 dakika, izole hareketlerde 90 saniye başlar.",
                 style = MaterialTheme.typography.bodySmall,
                 color = colors.onSurfaceVariant,
             )

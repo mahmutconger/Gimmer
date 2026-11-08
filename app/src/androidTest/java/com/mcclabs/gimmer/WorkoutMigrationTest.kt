@@ -25,8 +25,7 @@ class WorkoutMigrationTest {
             db.version = 1
         }
         val database = Room.databaseBuilder(context, WorkoutDatabase::class.java, name)
-            .addMigrations(WorkoutDatabase.MIGRATION_1_2, WorkoutDatabase.MIGRATION_2_3,
-                WorkoutDatabase.MIGRATION_3_4).build()
+            .addMigrations(*WorkoutDatabase.MIGRATIONS).build()
         try {
             val dao = database.workoutLogDao()
             val original = dao.getAll().single()
@@ -36,6 +35,8 @@ class WorkoutMigrationTest {
             assertNull(original.note)
             assertNull(original.rir)
             assertFalse(original.isWarmup)
+            assertEquals("machine_chest_press", original.exerciseId)
+            assertTrue(original.isCompound)
             assertTrue(database.bodyweightDao().getAll().isEmpty())
             assertTrue(database.nutritionDao().allMeals().isEmpty())
             dao.update(original.copy(weight = 55.0, note = "Kontrollü"))

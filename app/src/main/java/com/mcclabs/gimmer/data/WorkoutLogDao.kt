@@ -15,6 +15,8 @@ data class ExerciseSummary(val exerciseName: String, val workingSets: Long, val 
 
 data class WorkoutActivity(val dateTimestamp: Long, val sets: Int)
 
+data class SetValues(val weight: Double, val reps: Int)
+
 @Dao
 interface WorkoutLogDao {
     @Insert
@@ -22,11 +24,19 @@ interface WorkoutLogDao {
 
     @Query("""
         SELECT * FROM workout_logs
-        WHERE exerciseName = :name AND dayName = :day
+        WHERE (exerciseId = :exerciseId OR ((exerciseId IS NULL OR :exerciseId IS NULL) AND exerciseName = :name))
+        AND dayName = :day
         AND dateTimestamp >= :start AND dateTimestamp < :end
         ORDER BY dateTimestamp DESC, id DESC
     """)
-    fun observeWorkoutLogs(name: String, day: String, start: Long, end: Long): Flow<List<WorkoutLog>>
+    fun observeWorkoutLogs(name: String, day: String, start: Long, end: Long, exerciseId: String? = null): Flow<List<WorkoutLog>>
+
+    @Query("""
+        SELECT weight, reps FROM workout_logs
+        WHERE exerciseId = :exerciseId OR (exerciseId IS NULL AND exerciseName = :name)
+        ORDER BY dateTimestamp DESC, id DESC LIMIT 1
+    """)
+    suspend fun latestSet(exerciseId: String, name: String): SetValues?
 
     @Query("""
         SELECT dateTimestamp, sets FROM workout_logs
@@ -56,12 +66,13 @@ interface WorkoutLogDao {
             SUM(CASE WHEN isWarmup = 0 THEN sets ELSE 0 END) AS workingSets,
             SUM(CASE WHEN isWarmup = 0 THEN weight * reps * sets ELSE 0.0 END) AS volume
         FROM workout_logs
-        WHERE (:name = '' OR instr(lower(exerciseName), lower(:name)) > 0)
+        WHERE (:name = '' OR instr(lower(exerciseName), lower(:name)) > 0 OR exerciseName IN (:localizedMatches))
         AND """ + HISTORY_FILTER + """
         GROUP BY exerciseName
         ORDER BY exerciseName COLLATE NOCASE, exerciseName
     """)
-    fun observeSummaries(name: String, day: String, muscle: String, includeWarmups: Boolean):
+    fun observeSummaries(name: String, day: String, muscle: String, includeWarmups: Boolean,
+        localizedMatches: List<String> = emptyList()):
         Flow<List<ExerciseSummary>>
 
     @Query("""

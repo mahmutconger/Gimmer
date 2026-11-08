@@ -3,6 +3,7 @@ package com.mcclabs.gimmer
 import androidx.room.Room
 import androidx.test.platform.app.InstrumentationRegistry
 import com.mcclabs.gimmer.data.ExerciseSummary
+import com.mcclabs.gimmer.data.SetValues
 import com.mcclabs.gimmer.data.WorkoutDatabase
 import com.mcclabs.gimmer.data.WorkoutLog
 import kotlinx.coroutines.flow.first
@@ -41,6 +42,12 @@ class WorkoutHistoryTest {
             val activity = dao.observeActivity(100, 200).first()
             assertEquals(listOf(100L, 120L, 150L, 180L), activity.map { it.dateTimestamp }.sorted())
             assertEquals(12, activity.sumOf { it.sets })
+
+            assertEquals(SetValues(55.0, 10), dao.latestSet("lat_pulldown", "Lat Pulldown"))
+            dao.insert(set.copy(exerciseId = "lat_pulldown", exerciseName = "Yeni ad",
+                weight = 60.0, dateTimestamp = 300))
+            dao.insert(set.copy(exerciseId = "other_pulldown", weight = 70.0, dateTimestamp = 400))
+            assertEquals(SetValues(60.0, 10), dao.latestSet("lat_pulldown", "Lat Pulldown"))
         } finally {
             database.close()
         }

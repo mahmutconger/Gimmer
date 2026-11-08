@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mcclabs.gimmer.data.ExerciseSummary
 import com.mcclabs.gimmer.data.WorkoutLog
+import com.mcclabs.gimmer.data.WorkoutCatalog
 
 @Composable
 fun ProgressScreen(viewModel: WorkoutViewModel, bottomSpace: Dp, onExercise: (String) -> Unit) {
@@ -126,7 +127,7 @@ private fun ExerciseSummaryRow(summary: ExerciseSummary, onClick: () -> Unit) {
                 Icon(Icons.Rounded.FitnessCenter, contentDescription = null, modifier = Modifier.padding(10.dp).size(20.dp))
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                Text(summary.exerciseName, style = MaterialTheme.typography.titleMedium)
+                Text(WorkoutCatalog.displayName(summary.exerciseName), style = MaterialTheme.typography.titleMedium)
                 val description = if (summary.workingSets == 0L) "Isınma kayıtları"
                     else "${summary.workingSets} çalışma seti · ${formatMetric(summary.volume)} kg hacim"
                 Text(description, color = colors.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
@@ -150,7 +151,7 @@ fun ExerciseHistoryScreen(name: String, viewModel: WorkoutViewModel, bottomSpace
             contentPadding = PaddingValues(start = 20.dp, top = 20.dp, end = 20.dp, bottom = 20.dp + bottomSpace),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            item { ScreenHeading(name) }
+            item { ScreenHeading(WorkoutCatalog.displayName(name)) }
             val detail = history
             when {
                 detail == null -> item { LinearProgressIndicator(Modifier.fillMaxWidth()) }

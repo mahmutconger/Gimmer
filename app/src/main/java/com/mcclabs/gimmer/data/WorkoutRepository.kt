@@ -15,11 +15,12 @@ class WorkoutRepository(private val context: Context,
     private val weightDao = database.bodyweightDao()
     private val nutrition = NutritionRepository(database)
     val bodyweights = weightDao.observeAll()
-    fun workoutLogs(name: String, day: String, start: Long, end: Long) =
-        dao.observeWorkoutLogs(name, day, start, end)
+    fun workoutLogs(exercise: Exercise, day: String, start: Long, end: Long) =
+        dao.observeWorkoutLogs(exercise.name, day, start, end, exercise.id)
+    suspend fun latestSet(exercise: Exercise) = dao.latestSet(exercise.id, exercise.name)
     fun activity(start: Long, end: Long) = dao.observeActivity(start, end)
-    fun summaries(name: String, day: String, muscle: String, includeWarmups: Boolean) =
-        dao.observeSummaries(name, day, muscle, includeWarmups)
+    fun summaries(name: String, day: String, muscle: String, includeWarmups: Boolean, localizedMatches: List<String>) =
+        dao.observeSummaries(name, day, muscle, includeWarmups, localizedMatches)
     fun exerciseLogs(name: String, day: String, muscle: String, includeWarmups: Boolean) =
         dao.observeExercise(name, day, muscle, includeWarmups)
     suspend fun save(log: WorkoutLog) { requireValidLog(log); dao.insert(log) }
@@ -99,8 +100,7 @@ class WorkoutRepository(private val context: Context,
             if (bytes != null) file.writeBytes(bytes)
             val opened = Room.databaseBuilder(context, WorkoutDatabase::class.java, file.absolutePath)
                 .setJournalMode(RoomDatabase.JournalMode.TRUNCATE)
-                .addMigrations(WorkoutDatabase.MIGRATION_1_2, WorkoutDatabase.MIGRATION_2_3,
-                    WorkoutDatabase.MIGRATION_3_4).build()
+                .addMigrations(*WorkoutDatabase.MIGRATIONS).build()
             backup = opened
             return block(opened, file)
         } finally {

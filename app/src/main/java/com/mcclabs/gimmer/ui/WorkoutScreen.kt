@@ -41,6 +41,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.mcclabs.gimmer.data.Exercise
 import com.mcclabs.gimmer.data.WorkoutDay
 import com.mcclabs.gimmer.data.WorkoutLog
+import com.mcclabs.gimmer.data.SetValues
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
@@ -64,9 +65,9 @@ fun WorkoutScreen(viewModel: WorkoutViewModel, bottomSpace: Dp) {
     }
     val start = today.atStartOfDay(zone).toInstant().toEpochMilli()
     val end = today.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
-    val expandedName = day.exercises.firstOrNull { it.id == expandedExercise }?.name
-    val logs = if (expandedName == null) emptyList() else key(expandedName, day.id, start, end) {
-        val workoutLogs = remember(viewModel) { viewModel.workoutLogs(expandedName, day.name, start, end) }
+    val activeExercise = day.exercises.firstOrNull { it.id == expandedExercise }
+    val logs = if (activeExercise == null) emptyList() else key(activeExercise, day.id, start, end) {
+        val workoutLogs = remember(viewModel) { viewModel.workoutLogs(activeExercise, day.name, start, end) }
         workoutLogs.collectAsStateWithLifecycle(emptyList()).value
     }
 
@@ -107,7 +108,7 @@ fun WorkoutScreen(viewModel: WorkoutViewModel, bottomSpace: Dp) {
             }
             day.exercises.forEachIndexed { index, exercise ->
                 val expanded = expandedExercise == exercise.id
-                item(key = exercise.id) {
+                item(key = "${day.id}:${exercise.id}") {
                     WorkoutExerciseCard(
                         exercise = exercise,
                         index = index,
@@ -166,8 +167,15 @@ private fun WorkoutExerciseCard(
     onToggle: () -> Unit,
     onInfo: () -> Unit,
 ) {
-    var weight by rememberSaveable { mutableStateOf("") }
-    var reps by rememberSaveable { mutableStateOf("") }
+    var weightDraft by rememberSaveable { mutableStateOf<String?>(null) }
+    var repsDraft by rememberSaveable { mutableStateOf<String?>(null) }
+    var lastSet by remember { mutableStateOf<SetValues?>(null) }
+    var showPlates by rememberSaveable { mutableStateOf(false) }
+    val weight = weightDraft ?: lastSet?.weight?.let(::inputWeight).orEmpty()
+    val reps = repsDraft ?: lastSet?.reps?.toString().orEmpty()
+    LaunchedEffect(expanded, exercise.id, exercise.name) {
+        if (expanded) lastSet = viewModel.latestSet(exercise)
+    }
     var rir by rememberSaveable { mutableIntStateOf(2) }
     var isWarmup by rememberSaveable { mutableStateOf(false) }
     var note by rememberSaveable { mutableStateOf("") }
@@ -186,7 +194,7 @@ private fun WorkoutExerciseCard(
     }
     val colors = MaterialTheme.colorScheme
     val target = "${exercise.targetSets} set × ${exercise.targetReps}" +
-        if (exercise.id == "side_plank") "" else " tekrar"
+        if (exercise.targetReps.endsWith(" sn")) "" else " tekrar"
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -213,7 +221,7 @@ private fun WorkoutExerciseCard(
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 9.dp))
                 }
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Text(exercise.name, style = MaterialTheme.typography.titleMedium)
+                    Text(exercise.displayName, style = MaterialTheme.typography.titleMedium)
                     Text("${exercise.muscleGroup} · $target", color = colors.onSurfaceVariant,
                         style = MaterialTheme.typography.bodySmall)
                 }
@@ -236,15 +244,18 @@ private fun WorkoutExerciseCard(
                         Icon(Icons.Rounded.Info, contentDescription = "Hareket bilgisi", tint = colors.primary)
                     }
                 }
-                PerformanceFields(weight, reps, rir, isWarmup, note, { weight = it }, { reps = it },
-                    { rir = it }, { isWarmup = it }, { note = it })
+                PerformanceFields(weight, reps, rir, isWarmup, note, { weightDraft = it }, { repsDraft = it },
+                    { rir = it }, { isWarmup = it }, { note = it },
+                    onPlateCalculator = if (exercise.isBarbell) ({ showPlates = true }) else null)
                 Button(
                     enabled = !saving && validPerformance(weight, reps),
                     onClick = {
                         saving = true
-                        val job = viewModel.saveWorkout(exercise, dayName, weight.replace(',', '.').toDouble(),
-                            reps.toInt(), rir, isWarmup, note) {
-                            reps = ""
+                        val saved = SetValues(requireNotNull(parseWeight(weight)), reps.toInt())
+                        val job = viewModel.saveWorkout(exercise, dayName, saved.weight, saved.reps, rir, isWarmup, note) {
+                            lastSet = saved
+                            weightDraft = null
+                            repsDraft = null
                             note = ""
                         }
                         job.invokeOnCompletion { saving = false }
@@ -256,4 +267,5 @@ private fun WorkoutExerciseCard(
             }
         }
     }
+    if (expanded && showPlates) PlateCalculatorSheet(parseWeight(weight)) { showPlates = false }
 }

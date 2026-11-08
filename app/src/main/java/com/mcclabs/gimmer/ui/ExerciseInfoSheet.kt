@@ -20,7 +20,7 @@ fun ExerciseInfoSheet(exercise: Exercise, onDismiss: () -> Unit) {
         ) {
             Text(exercise.muscleGroup, style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary)
-            Text(exercise.name, style = MaterialTheme.typography.headlineSmall)
+            Text(exercise.displayName, style = MaterialTheme.typography.headlineSmall)
             val steps = ExerciseMetadata.instructions(exercise.id)
             if (steps.isEmpty()) Text("Bu hareket için uygulama adımları henüz eklenmedi.")
             else {

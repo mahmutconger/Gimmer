@@ -77,7 +77,11 @@ class WorkoutViewModel(application: Application, savedState: SavedStateHandle) :
     private val selectedFilters = filter.map { it.copy(query = "") }.distinctUntilChanged()
     val progressSummaries = combine(searchQuery, selectedFilters) { query, options -> options.copy(query = query) }
         .flatMapLatest {
-            repository.summaries(it.query, it.day, it.muscle, it.includeWarmups)
+            val query = it.query.lowercase(Turkish)
+            val names = WorkoutCatalog.exercisesByName.values
+                .filter { exercise -> query.isNotEmpty() && exercise.displayName.lowercase(Turkish).contains(query) }
+                .map { exercise -> exercise.name }
+            repository.summaries(it.query, it.day, it.muscle, it.includeWarmups, names)
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), null)
     val exportedJson = MutableStateFlow("")
     val cloudBusy = MutableStateFlow(false)
@@ -100,8 +104,10 @@ class WorkoutViewModel(application: Application, savedState: SavedStateHandle) :
         }
     }
 
-    fun workoutLogs(name: String, day: String, start: Long, end: Long) =
-        repository.workoutLogs(name, day, start, end)
+    fun workoutLogs(exercise: Exercise, day: String, start: Long, end: Long) =
+        repository.workoutLogs(exercise, day, start, end)
+
+    suspend fun latestSet(exercise: Exercise) = repository.latestSet(exercise)
 
     internal fun monthlyActivity(month: YearMonth, zone: ZoneId): Flow<Map<LocalDate, Long>> {
         val start = month.atDay(1).atStartOfDay(zone).toInstant().toEpochMilli()
@@ -138,10 +144,11 @@ class WorkoutViewModel(application: Application, savedState: SavedStateHandle) :
     fun saveWorkout(exercise: Exercise, dayName: String, weight: Double, reps: Int, rir: Int,
         isWarmup: Boolean, note: String?, onSaved: () -> Unit) = perform("Set kaydedildi.") {
         require(rir in 0..4)
-        repository.save(WorkoutLog(exerciseName = exercise.name, muscleGroup = exercise.muscleGroup,
+        repository.save(WorkoutLog(exerciseName = exercise.name, exerciseId = exercise.id,
+            isCompound = exercise.isCompound, muscleGroup = exercise.muscleGroup,
             dayName = dayName, weight = weight, sets = 1, reps = reps, rir = rir, isWarmup = isWarmup,
             note = note?.trim()?.ifBlank { null }, dateTimestamp = System.currentTimeMillis()))
-        restTimer.start()
+        restTimer.startFor(exercise)
         onSaved()
     }
     fun saveBodyweight(weight: Double, onSaved: () -> Unit) = perform("Vücut ağırlığı kaydedildi.") {

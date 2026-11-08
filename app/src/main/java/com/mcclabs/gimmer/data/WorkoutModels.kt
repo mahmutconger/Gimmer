@@ -10,6 +10,9 @@ data class Exercise(
     val targetSets: Int,
     val targetReps: String,
     val muscleGroup: String = ExerciseMetadata.muscleGroup(id),
+    val isCompound: Boolean = ExerciseMetadata.isCompound(id),
+    val isBarbell: Boolean = ExerciseMetadata.isBarbell(id),
+    val displayName: String = ExerciseMetadata.turkishName(id) ?: name,
 )
 
 data class WorkoutDay(
@@ -21,7 +24,7 @@ data class WorkoutDay(
 
 @Entity(
     tableName = "workout_logs",
-    indices = [Index("exerciseName"), Index("dateTimestamp")],
+    indices = [Index("exerciseName"), Index("dateTimestamp"), Index("exerciseId", "dateTimestamp")],
 )
 data class WorkoutLog(
     @PrimaryKey(autoGenerate = true)
@@ -39,6 +42,9 @@ data class WorkoutLog(
     val sets: Int,
     val reps: Int,
     val dateTimestamp: Long,
+    val exerciseId: String? = null,
+    @androidx.room.ColumnInfo(defaultValue = "0")
+    val isCompound: Boolean = false,
 )
 
 object WorkoutCatalog {
@@ -122,4 +128,9 @@ object WorkoutCatalog {
             ),
         ),
     )
+
+    val exercisesById = days.flatMap { it.exercises }.associateBy { it.id }
+    val exercisesByName = exercisesById.values.associateBy { it.name }
+
+    fun displayName(name: String): String = exercisesByName[name]?.displayName ?: name
 }

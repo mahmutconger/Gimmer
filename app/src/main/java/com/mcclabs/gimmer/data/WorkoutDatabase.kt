@@ -10,7 +10,7 @@ import com.mcclabs.gimmer.nutrition.NutritionDao
 
 @Database(
     entities = [WorkoutLog::class, BodyweightLog::class, FoodEntry::class, MealLog::class],
-    version = 4,
+    version = 5,
     exportSchema = false,
 )
 abstract class WorkoutDatabase : RoomDatabase() {
@@ -27,7 +27,7 @@ abstract class WorkoutDatabase : RoomDatabase() {
                 context.applicationContext,
                 WorkoutDatabase::class.java,
                 "gimmer_workout_database",
-            ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4).build().also { instance = it }
+            ).addMigrations(*MIGRATIONS).build().also { instance = it }
         }
 
         val MIGRATION_1_2 = object : androidx.room.migration.Migration(1, 2) {
@@ -69,5 +69,21 @@ abstract class WorkoutDatabase : RoomDatabase() {
                 db.execSQL("CREATE INDEX index_meal_logs_dateTimestamp ON meal_logs(dateTimestamp)")
             }
         }
+
+        private val MIGRATION_4_5 = object : androidx.room.migration.Migration(4, 5) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE workout_logs ADD COLUMN exerciseId TEXT")
+                db.execSQL("ALTER TABLE workout_logs ADD COLUMN isCompound INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("CREATE INDEX index_workout_logs_exerciseId_dateTimestamp ON workout_logs(exerciseId, dateTimestamp)")
+                WorkoutCatalog.exercisesById.values.forEach { exercise ->
+                    db.execSQL(
+                        "UPDATE workout_logs SET exerciseId = ?, isCompound = ? WHERE exerciseName = ?",
+                        arrayOf<Any>(exercise.id, if (exercise.isCompound) 1 else 0, exercise.name),
+                    )
+                }
+            }
+        }
+
+        internal val MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
     }
 }
