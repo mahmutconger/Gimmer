@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+Copyright 2025 The Android Open Source Project
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+
+Adapted from AndroidX Compose Rounded.FitnessCenter for the adaptive launcher foreground.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:pivotX="12"
+        android:pivotY="12"
+        android:scaleX="2.35"
+        android:scaleY="2.35"
+        android:translateX="42"
+        android:translateY="42">
+        <path
+            android:fillColor="#91B9FF"
+            android:pathData="M20.57,14.86 l0.72,-0.72 c0.39,-0.39,0.39,-1.02,0.0,-1.41 l-0.02,-0.02
+                c-0.39,-0.39,-1.02,-0.39,-1.41,0.0 L17.0,15.57 L8.43,7.0 l2.86,-2.86
+                c0.39,-0.39,0.39,-1.02,0.0,-1.41 l-0.02,-0.02 c-0.39,-0.39,-1.02,-0.39,-1.41,0.0 l-0.72,0.72
+                l-0.72,-0.72 c-0.39,-0.39,-1.03,-0.39,-1.42,0.0 L5.57,4.14 l-0.72,-0.72
+                c-0.39,-0.39,-1.04,-0.39,-1.43,0.0 c-0.39,0.39,-0.39,1.04,0.0,1.43 l0.72,0.72 L2.71,7.0
+                c-0.39,0.39,-0.39,1.02,0.0,1.41 l0.72,0.72 l-0.72,0.73 c-0.39,0.39,-0.39,1.02,0.0,1.41
+                l0.02,0.02 c0.39,0.39,1.02,0.39,1.41,0.0 L7.0,8.43 L15.57,17.0
+                l-2.86,2.86 c-0.39,0.39,-0.39,1.02,0.0,1.41 l0.02,0.02 c0.39,0.39,1.02,0.39,1.41,0.0
+                l0.72,-0.72 l0.72,0.72 c0.39,0.39,1.02,0.39,1.41,0.0 l1.43,-1.43
+                l0.72,0.72 c0.39,0.39,1.04,0.39,1.43,0.0 c0.39,-0.39,0.39,-1.04,0.0,-1.43 l-0.72,-0.72
+                L21.29,17.0 c0.39,-0.39,0.39,-1.02,0.0,-1.41 l-0.72,-0.73 Z" />
+    </group>
+</vector>
