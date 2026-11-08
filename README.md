@@ -12,9 +12,10 @@
   <img src="https://img.shields.io/badge/Android-9%2B-183054?style=flat-square" alt="Android 9 ve üzeri">
   <img src="https://img.shields.io/badge/Kotlin-Android-273448?style=flat-square" alt="Kotlin">
   <img src="https://img.shields.io/badge/Jetpack-Compose-315D9B?style=flat-square" alt="Jetpack Compose">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/Lisans-MIT-315D9B?style=flat-square" alt="MIT Lisansı"></a>
 </p>
 
-Gimmer’da programındaki setleri ve öğünlerini kaydedebilir, hareket bazında ağırlık ve tekrar değişimini takip edebilirsin. Kayıtlar cihazda saklanır. İstersen Google Drive’da düzenli yedek tutabilir veya geçmişini JSON dosyası olarak indirebilirsin.
+Gimmer, kas geliştirme antrenmanlarını, öğünlerini ve toparlanma kayıtlarını bir arada tutan Türkçe bir Android uygulamasıdır. Salonda önceki ağırlığını aramak yerine son set değerleriyle başlayabilir, zaman içinde hangi hareketlerde ilerlediğini görebilirsin.
 
 ## Ekranlar
 
@@ -26,17 +27,30 @@ Gimmer’da programındaki setleri ve öğünlerini kaydedebilir, hareket bazın
 
 <p align="center"><sub>Antrenman · Beslenme · Hareket gelişimi</sub></p>
 
-## Özellikler
+## Gimmer neler sağlar?
 
-| Bölüm | Neler yapabilirsin? |
+### Antrenman sırasında
+
+- Bir hareketi açtığında **son setin ağırlığı ve tekrar sayısı** gelir. Büyük artı ve eksi düğmeleriyle ağırlığı 2,5 kg, tekrarı 1 adım değiştir.
+- Isınma ve çalışma setlerini ayrı kaydet. Her sete **RIR** (yedekte kalan tekrar) ve isteğe bağlı not ekleyebilirsin.
+- Set kaydından sonra dinlenme sayacı bileşik hareketlerde **180 saniye**, izole hareketlerde **90 saniye** başlar. Zamanlayıcıyı elle de kullanabilirsin.
+- Bar hareketinde plaka hesaplayıcıyı aç. **20 kg barın** her tarafına takılacak plakaları gör. Hedef tam yüklenemediğinde, hesaplayıcı hedefi aşmayan en yakın ağırlığı gösterir.
+
+### Beslenme ve gelişim takibi
+
+- Öğünlerini gram olarak kaydet ve günlük kalori, protein, karbonhidrat ve yağ hedeflerini takip et. Open Food Facts üzerinden ürün adı veya barkodla arayabilir ya da besini elle girebilirsin.
+- Antrenman günlerini aylık takvimden incele. Hareket grafiğindeki her nokta o günün en ağır çalışma setini gösterir. Bir noktaya dokunarak tarihi, ağırlığı ve tekrar sayısını birlikte görebilirsin.
+- Vücut ağırlığı geçmişini takip et. **Gelişim → Günlük Durum** bölümünde gece uykunu 4–10 saat arasında, yarım saatlik adımlarla kaydet.
+
+### Programı düzenleme ve kayıtları taşıma
+
+| İşlem | Nereden yapılır? |
 | --- | --- |
-| **Antrenman** | Son ağırlık ve tekrar değerleriyle başla, artı ve eksi düğmeleriyle ayarla. Bar hareketlerinde plaka hesabını aç. Isınma ve çalışma setlerini ayrı kaydet. |
-| **Zamanlayıcı** | Bileşik hareketlerden sonra 180, izole hareketlerden sonra 90 saniye dinlen. Sayacı elle de başlatabilirsin. |
-| **Beslenme** | Öğün ve porsiyon kaydet. Kalori, protein, karbonhidrat ve yağ hedeflerini takip et. Ürün adı ya da barkodla ara veya besini elle gir. |
-| **Gelişim** | Aylık antrenman takvimini ve hareket grafiklerini incele. Vücut ağırlığını ve gece uykunu kaydet. |
-| **Yedekleme** | Drive’a elle veya seçtiğin aralıkta yedekle, kayıtlı bir sürümü geri yükle veya JSON dosyasını istediğin klasöre kaydet. |
+| **Antrenman programını değiştir** | **Ayarlar → Antrenman programı** bölümünden programı JSON olarak kopyala. Düzenlediğin metni içe aktar, önizle ve onayla. Bu işlem etkin programı değiştirir ve kayıtlı set geçmişini korur. [JSON biçimi ve örnek](docs/program-json.md) |
+| **Kayıtlarının bir dosya kopyasını al** | **Ayarlar → Veri aktarımı → JSON dosyasını indir** ile antrenman, beslenme, vücut ağırlığı ve uyku kayıtlarını kaydet. Özel programın da dosyaya eklenir. |
+| **Drive’a yedekle veya geri yükle** | **Ayarlar → Bulut yedeği** bölümünden elle yedekle ya da 1 saat, 6 saat, 24 saat veya 7 gün aralığı seç. Android, arka plan koşulları uygun olduğunda otomatik işi çalıştırır. Her kurulumun son beş yedek sürümünden birini seçebilirsin. [Drive kurulum rehberi](PREMIUM_SETUP.md) |
 
-Programını dışarıda düzenlemek için [program JSON’u rehberine](docs/program-json.md) bak.
+Antrenman, öğün ve ölçüm kayıtları cihazda saklanır. Çevrimiçi ürün araması ile Drive yedeklemesi bağlantı gerektirir.
 
 ## Kurulum
 
@@ -65,4 +79,12 @@ Cihaz testleri için çalışan bir emülatör veya bağlı Android cihaz gereki
 
 ## Altyapı
 
-Arayüz **Kotlin**, **Jetpack Compose** ve **Material 3** ile geliştirildi. **Room** yerel kayıtları, **WorkManager** otomatik yedeklemeyi, **Vico** grafikleri yönetir. Besin aramasında [Open Food Facts](https://openfoodfacts.github.io/documentation/docs/Product-Opener/api/) verileri kullanılır.
+Arayüz Kotlin, Jetpack Compose ve Material 3 ile geliştirildi. Room yerel kayıtları, WorkManager otomatik yedeklemeyi, Vico grafikleri yönetir. Besin kataloğuna Retrofit ile erişilir. [Open Food Facts API](https://openfoodfacts.github.io/documentation/docs/Product-Opener/api/)
+
+## Katkıda bulunma
+
+Değişikliği ayrı bir dalda hazırla ve `main` dalına bir PR aç. Kapsam, test ve inceleme beklentileri [katkı rehberinde](CONTRIBUTING.md) yer alır. [PR şablonu](.github/pull_request_template.md)
+
+## Lisans
+
+Gimmer’ın kaynak kodu [MIT Lisansı](LICENSE) ile yayımlanır. [Manrope yazı tipi](app/src/main/assets/licenses/manrope.txt) ve [AndroidX simgesi](app/src/main/assets/licenses/apache-2.0.txt) kendi lisanslarına tabidir. Besin kataloğu Open Food Facts tarafından sağlanır. [Open Food Facts veri lisansları](https://openfoodfacts.github.io/documentation/docs/Product-Opener/api/tutorials/license-be-on-the-legal-side/)
