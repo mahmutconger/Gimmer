@@ -142,14 +142,26 @@ class WorkoutViewModel(application: Application, savedState: SavedStateHandle) :
     }
 
     fun saveWorkout(exercise: Exercise, dayName: String, weight: Double, reps: Int, rir: Int,
-        isWarmup: Boolean, note: String?, onSaved: () -> Unit) = perform("Set kaydedildi.") {
+        isWarmup: Boolean, note: String?, partner: Exercise? = null, firstInPair: Boolean = false,
+        onSaved: (Exercise?) -> Unit) = perform("Set kaydedildi.") {
         require(rir in 0..4)
+        val now = Instant.now()
+        val zone = ZoneId.systemDefault()
+        val today = now.atZone(zone).toLocalDate()
+        val next = partner?.takeUnless { isWarmup }?.takeIf {
+            repository.countWorkingSets(it, dayName, today.atStartOfDay(zone).toInstant().toEpochMilli(),
+                today.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()) < it.targetSets
+        }
         repository.save(WorkoutLog(exerciseName = exercise.name, exerciseId = exercise.id,
             isCompound = exercise.isCompound, muscleGroup = exercise.muscleGroup,
             dayName = dayName, weight = weight, sets = 1, reps = reps, rir = rir, isWarmup = isWarmup,
-            note = note?.trim()?.ifBlank { null }, dateTimestamp = System.currentTimeMillis()))
-        restTimer.startFor(exercise)
-        onSaved()
+            note = note?.trim()?.ifBlank { null }, dateTimestamp = now.toEpochMilli()))
+        if (!firstInPair || next == null) {
+            restTimer.startFor(if (!isWarmup && !firstInPair && partner?.isCompound == true) partner else exercise)
+        } else {
+            restTimer.cancel()
+        }
+        onSaved(next)
     }
     fun saveBodyweight(weight: Double, onSaved: () -> Unit) = perform("Vücut ağırlığı kaydedildi.") {
         repository.saveBodyweight(BodyweightLog(LocalDate.now().toString(), weight))
@@ -186,6 +198,22 @@ class WorkoutViewModel(application: Application, savedState: SavedStateHandle) :
             }
         }.invokeOnCompletion { savingJson.value = false }
     }
+
+    internal val progressPhotos = repository.progressPhotos
+    internal val savingPhoto = MutableStateFlow(false)
+    internal suspend fun progressPhotoImage(id: String) = repository.photoImage(id)
+
+    internal fun addProgressPhoto(uri: Uri, date: LocalDate) {
+        if (!savingPhoto.compareAndSet(expect = false, update = true)) return
+        perform("Fotoğraf kaydedildi.") { repository.addPhoto(uri, date) }
+            .invokeOnCompletion { savingPhoto.value = false }
+    }
+
+    internal fun changePhotoDate(id: String, date: LocalDate) =
+        perform("Fotoğraf tarihi güncellendi.") { repository.updatePhotoDate(id, date) }
+
+    internal fun removeProgressPhoto(id: String) =
+        perform("Fotoğraf silindi.") { repository.deletePhoto(id) }
 
     internal fun enableAutomaticBackup(account: String) = driveAction {
         val interval = automaticBackup.value.interval

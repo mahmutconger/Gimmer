@@ -26,7 +26,7 @@ import com.mcclabs.gimmer.data.WorkoutLog
 import com.mcclabs.gimmer.data.WorkoutCatalog
 
 @Composable
-fun ProgressScreen(viewModel: WorkoutViewModel, bottomSpace: Dp, onExercise: (ExerciseSummary) -> Unit) {
+fun ProgressScreen(viewModel: WorkoutViewModel, bottomSpace: Dp, onPhotos: () -> Unit, onExercise: (ExerciseSummary) -> Unit) {
     val summaries by viewModel.progressSummaries.collectAsStateWithLifecycle()
     val bodyweights by viewModel.bodyweights.collectAsStateWithLifecycle()
     val days by viewModel.days.collectAsStateWithLifecycle()
@@ -38,6 +38,7 @@ fun ProgressScreen(viewModel: WorkoutViewModel, bottomSpace: Dp, onExercise: (Ex
     ) {
         item { ScreenHeading("Gelişim", "Ölçümlerini ve set geçmişini takip et.") }
         item { ActivityCalendar(viewModel) }
+        item { ProgressPhotosCard(onPhotos) }
         item { DailyConditionCard(viewModel) }
         item { BodyweightSection(bodyweights, viewModel) }
         item {

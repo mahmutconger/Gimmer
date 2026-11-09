@@ -43,7 +43,7 @@ internal object RoutineCodec {
                         "targetSets" to exercise.targetSets, "targetReps" to exercise.targetReps,
                         "muscleGroup" to exercise.muscleGroup, "isCompound" to exercise.isCompound,
                         "isBarbell" to exercise.isBarbell)
-                })
+                }, "pairs" to day.pairs.map { listOf(it.firstId, it.secondId) })
         }),
     ).asJsonObject
 
@@ -71,7 +71,7 @@ internal object RoutineCodec {
             val exercises = day.getAsJsonArray("exercises")
             require(exercises != null && exercises.size() in 1..40) { "Her günde 1 ile 40 arasında hareket olmalı." }
             val dayExerciseIds = mutableSetOf<String>()
-            WorkoutDay(id, name, day.text("programName", 100), exercises.map { item ->
+            val decodedExercises = exercises.map { item ->
                 val row = item.asJsonObject
                 val exerciseId = row.id()
                 require(dayExerciseIds.add(exerciseId)) { "Aynı hareket bir güne iki kez eklenemez." }
@@ -98,7 +98,22 @@ internal object RoutineCodec {
                 val priorId = exerciseIdsByName.putIfAbsent(displayName.lowercase(turkish), exerciseId)
                 require(priorId == null || priorId == exerciseId) { "Farklı hareketler aynı adı kullanamaz." }
                 exercise
-            })
+            }
+            val pairedIds = mutableSetOf<String>()
+            val pairs = day.getAsJsonArray("pairs")?.map { entry ->
+                val pair = entry.asJsonArray
+                require(pair.size() == 2 && pair.all { it.isJsonPrimitive && it.asJsonPrimitive.isString }) {
+                    "Her çift iki hareket kimliği içermeli."
+                }
+                val first = pair[0].asString
+                val second = pair[1].asString
+                require(first in dayExerciseIds && second in dayExerciseIds &&
+                    pairedIds.add(first) && pairedIds.add(second)) {
+                    "Hareket çiftleri aynı günden olmalı ve bir hareket yalnızca bir çifte girebilir."
+                }
+                first to second
+            }.orEmpty()
+            WorkoutDay(id, name, day.text("programName", 100), decodedExercises).withPairs(*pairs.toTypedArray())
         }
     }
 

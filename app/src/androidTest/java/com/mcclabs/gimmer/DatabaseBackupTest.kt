@@ -14,6 +14,40 @@ import java.time.ZoneId
 import java.util.UUID
 
 class DatabaseBackupTest {
+    @Test fun photoOnlySnapshotRestoresTheDateAndImageWithoutResurrectingLocalDeletions() = runBlocking {
+        val context = InstrumentationRegistry.getInstrumentation().targetContext
+        val source = Room.inMemoryDatabaseBuilder(context, WorkoutDatabase::class.java).build()
+        val target = Room.inMemoryDatabaseBuilder(context, WorkoutDatabase::class.java).build()
+        try {
+            val from = WorkoutRepository(context, source)
+            val into = WorkoutRepository(context, target)
+            val output = java.io.ByteArrayOutputStream()
+            val bitmap = android.graphics.Bitmap.createBitmap(48, 64, android.graphics.Bitmap.Config.ARGB_8888)
+            assertTrue(bitmap.compress(android.graphics.Bitmap.CompressFormat.JPEG, 90, output))
+            bitmap.recycle()
+            val photo = ProgressPhoto(UUID.randomUUID().toString(), "2026-11-07", output.toByteArray())
+            source.progressPhotoDao().insert(photo)
+            val editedDate = LocalDate.parse("2026-11-08")
+            from.updatePhotoDate(photo.id, editedDate)
+
+            val restored = from.withDatabaseSnapshot { file ->
+                val bytes = file.readBytes()
+                assertEquals(1, into.restoreDatabase(file))
+                assertEquals(listOf(ProgressPhotoEntry(photo.id, editedDate.toString())), into.progressPhotos.first())
+                assertArrayEquals(photo.jpeg, into.photoImage(photo.id))
+                assertEquals(0, into.restoreDatabase(bytes))
+                into.deletePhoto(photo.id)
+                assertEquals(0, into.restoreDatabase(bytes))
+                into.progressPhotos.first()
+            }
+            assertNotNull(restored)
+            assertTrue(restored!!.isEmpty())
+        } finally {
+            source.close()
+            target.close()
+        }
+    }
+
     @Test fun routineReplacementAndRestoreLeaveTheWorkoutHistoryIntact() = runBlocking {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val source = Room.inMemoryDatabaseBuilder(context, WorkoutDatabase::class.java).build()
@@ -22,7 +56,7 @@ class DatabaseBackupTest {
             val from = WorkoutRepository(context, source)
             val into = WorkoutRepository(context, target)
             val day = WorkoutCatalog.days.first()
-            val updated = listOf(day.copy(exercises = day.exercises.take(1), programName = "Yeni program"))
+            val updated = listOf(day.copy(exercises = day.exercises.take(1), pairs = emptyList(), programName = "Yeni program"))
             val exercise = day.exercises.first()
             from.save(WorkoutLog(exerciseName = exercise.name, exerciseId = exercise.id,
                 weight = 55.0, sets = 1, reps = 8, dateTimestamp = 1794000000000))

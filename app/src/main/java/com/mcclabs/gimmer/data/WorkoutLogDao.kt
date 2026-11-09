@@ -32,6 +32,13 @@ interface WorkoutLogDao {
     fun observeWorkoutLogs(name: String, day: String, start: Long, end: Long, exerciseId: String? = null): Flow<List<WorkoutLog>>
 
     @Query("""
+        SELECT COALESCE(SUM(sets), 0) FROM workout_logs
+        WHERE (exerciseId = :exerciseId OR (exerciseId IS NULL AND exerciseName = :name))
+        AND dayName = :day AND dateTimestamp >= :start AND dateTimestamp < :end AND isWarmup = 0
+    """)
+    suspend fun countWorkingSets(exerciseId: String, name: String, day: String, start: Long, end: Long): Int
+
+    @Query("""
         SELECT weight, reps FROM workout_logs
         WHERE exerciseId = :exerciseId OR (exerciseId IS NULL AND exerciseName = :name)
         ORDER BY dateTimestamp DESC, id DESC LIMIT 1

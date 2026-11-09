@@ -32,6 +32,7 @@ import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
@@ -60,6 +61,7 @@ fun WorkoutScreen(viewModel: WorkoutViewModel, bottomSpace: Dp) {
     var expandedExercise by rememberSaveable { mutableStateOf<String?>(null) }
     val day = days.firstOrNull { it.id == selectedDayId } ?: days.first()
     val listState = rememberLazyListState()
+    val focus = LocalFocusManager.current
     var infoExercise by remember { mutableStateOf<Exercise?>(null) }
     var editingLog by remember { mutableStateOf<WorkoutLog?>(null) }
     val zone = ZoneId.systemDefault()
@@ -112,12 +114,31 @@ fun WorkoutScreen(viewModel: WorkoutViewModel, bottomSpace: Dp) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
+            val pairs = day.pairs.sortedBy { pair -> day.exercises.indexOfFirst { it.id == pair.firstId } }
             day.exercises.forEachIndexed { index, exercise ->
+                val pairIndex = pairs.indexOfFirst { exercise.id == it.firstId || exercise.id == it.secondId }
+                val pair = pairs.getOrNull(pairIndex)
+                val firstInPair = pair?.firstId == exercise.id
+                val partner = pair?.let {
+                    val partnerId = if (firstInPair) it.secondId else it.firstId
+                    day.exercises.first { candidate -> candidate.id == partnerId }
+                }
+                val pairLabel = pair?.let { "Çift ${pairIndex + 1} · A${if (firstInPair) 1 else 2}" }
                 val expanded = expandedExercise == exercise.id
                 item(key = "${day.id}:${exercise.id}") {
                     WorkoutExerciseCard(
                         exercise = exercise,
                         index = index,
+                        pairLabel = pairLabel,
+                        partner = partner,
+                        firstInPair = firstInPair,
+                        onAlternate = {
+                            if (day.id == (selectedDayId ?: days.first().id) && expandedExercise == exercise.id) {
+                                focus.clearFocus()
+                                expandedExercise = it.id
+                                listState.requestScrollToItem(2 + day.exercises.indexOf(it))
+                            }
+                        },
                         dayName = day.name,
                         viewModel = viewModel,
                         expanded = expanded,
@@ -154,6 +175,9 @@ private fun ProgramCard(day: WorkoutDay) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
             Text(day.name, color = colors.primary, style = MaterialTheme.typography.labelLarge)
             Text(day.programName, color = colors.onSurface, style = MaterialTheme.typography.headlineMedium)
+            if (day.pairs.isNotEmpty()) {
+                Text("A1 → A2 → dinlen", color = colors.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+            }
         }
         Surface(shape = CircleShape, color = colors.primary.copy(alpha = 0.14f), contentColor = colors.primary) {
             Icon(Icons.Rounded.FitnessCenter, contentDescription = null,
@@ -166,6 +190,10 @@ private fun ProgramCard(day: WorkoutDay) {
 private fun WorkoutExerciseCard(
     exercise: Exercise,
     index: Int,
+    pairLabel: String?,
+    partner: Exercise?,
+    firstInPair: Boolean,
+    onAlternate: (Exercise) -> Unit,
     dayName: String,
     viewModel: WorkoutViewModel,
     expanded: Boolean,
@@ -232,6 +260,9 @@ private fun WorkoutExerciseCard(
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 9.dp))
                 }
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                    if (pairLabel != null) {
+                        Text(pairLabel, color = colors.primary, style = MaterialTheme.typography.labelMedium)
+                    }
                     Text(exercise.displayName, style = MaterialTheme.typography.titleMedium)
                     Text("${exercise.muscleGroup} · $target", color = colors.onSurfaceVariant,
                         style = MaterialTheme.typography.bodySmall)
@@ -264,7 +295,9 @@ private fun WorkoutExerciseCard(
                     onClick = {
                         saving = true
                         val saved = SetValues(requireNotNull(parseWeight(weight)), reps.toInt())
-                        val job = viewModel.saveWorkout(exercise, dayName, saved.weight, saved.reps, rir, isWarmup, note) {
+                        val job = viewModel.saveWorkout(exercise, dayName, saved.weight, saved.reps, rir, isWarmup, note,
+                            partner = partner, firstInPair = firstInPair) { next ->
+                            next?.let(onAlternate)
                             lastSet = saved
                             weightDraft = null
                             repsDraft = null

@@ -20,7 +20,22 @@ data class WorkoutDay(
     val name: String,
     val programName: String,
     val exercises: List<Exercise>,
+    val pairs: List<ExercisePair> = emptyList(),
 )
+
+data class ExercisePair(val firstId: String, val secondId: String)
+
+internal fun WorkoutDay.withPairs(vararg pairIds: Pair<String, String>): WorkoutDay {
+    val pairs = pairIds.map { (first, second) -> ExercisePair(first, second) }
+    val byFirst = pairs.associateBy { it.firstId }
+    val secondIds = pairs.map { it.secondId }.toSet()
+    val ordered = exercises.filterNot { it.id in secondIds }.flatMap { exercise ->
+        val pair = byFirst[exercise.id]
+        if (pair == null) listOf(exercise)
+        else listOf(exercise, exercises.first { it.id == pair.secondId })
+    }
+    return copy(exercises = ordered, pairs = pairs)
+}
 
 @Entity(
     tableName = "workout_logs",
@@ -63,6 +78,10 @@ object WorkoutCatalog {
                 Exercise("overhead_cable_triceps_ext", "Overhead Cable Triceps Ext", 3, "10-15"),
                 Exercise("hammer_curl", "Hammer Curl", 3, "10-15"),
             ),
+        ).withPairs(
+            "machine_chest_press" to "lat_pulldown",
+            "incline_db_press" to "seated_cable_row",
+            "db_lateral_raise" to "incline_db_curl",
         ),
         WorkoutDay(
             id = "tuesday",
@@ -78,6 +97,10 @@ object WorkoutCatalog {
                 Exercise("reverse_crunch", "Reverse Crunch", 3, "12-20"),
                 Exercise("cable_crunch", "Cable Crunch", 3, "10-15"),
             ),
+        ).withPairs(
+            "hack_squat" to "standing_calf_raise",
+            "leg_extension" to "seated_leg_curl",
+            "hip_adduction" to "reverse_crunch",
         ),
         WorkoutDay(
             id = "thursday",
@@ -94,6 +117,9 @@ object WorkoutCatalog {
                 Exercise("overhead_db_extension", "Overhead DB Extension", 3, "10-15"),
                 Exercise("pallof_press", "Pallof Press", 3, "10-15"),
             ),
+        ).withPairs(
+            "high_to_low_cable_fly" to "rope_triceps_pushdown",
+            "low_to_high_cable_fly" to "pallof_press",
         ),
         WorkoutDay(
             id = "friday",
@@ -110,6 +136,8 @@ object WorkoutCatalog {
                 Exercise("reverse_grip_ez_curl", "Reverse-Grip EZ Curl", 3, "10-15"),
                 Exercise("wrist_curl_reverse", "Wrist Curl + Reverse", 3, "12-20"),
             ),
+        ).withPairs(
+            "reverse_pec_deck" to "ez_preacher_curl",
         ),
         WorkoutDay(
             id = "saturday",
@@ -126,6 +154,10 @@ object WorkoutCatalog {
                 Exercise("side_plank", "Side Plank", 3, "30-45 sn"),
                 Exercise("ab_wheel", "Ab Wheel", 3, "8-12"),
             ),
+        ).withPairs(
+            "leg_press" to "seated_calf_raise",
+            "lying_leg_curl" to "hanging_knee_raise",
+            "hip_abduction" to "ab_wheel",
         ),
     )
 

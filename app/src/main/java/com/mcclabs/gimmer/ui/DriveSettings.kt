@@ -117,7 +117,7 @@ internal fun DriveSettings(viewModel: WorkoutViewModel) {
 
     val enabled = !busy && action == null && !selectingAccount
     val selectedAccount = settings.account
-    SettingsCard("Bulut yedeği", "Antrenman, beslenme ve vücut ağırlığı kayıtlarını Google Drive'da sakla.") {
+    SettingsCard("Bulut yedeği", "Antrenman, beslenme, ölçüm ve gelişim fotoğraflarını Google Drive'da sakla.") {
         Row(
             Modifier.fillMaxWidth().toggleable(
                 value = selectedAccount != null,

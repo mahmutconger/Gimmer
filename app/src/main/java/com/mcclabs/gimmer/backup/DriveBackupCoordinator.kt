@@ -7,6 +7,8 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.IOException
+import java.io.File
+import kotlinx.coroutines.ensureActive
 import java.security.MessageDigest
 
 internal const val BACKUPS_PER_DEVICE = 5
@@ -21,40 +23,58 @@ internal object DriveBackupCoordinator {
 
     suspend fun backup(context: Context, token: String, beforeUpload: () -> Unit = {}): DriveBackupOutcome =
         operation.withLock {
-            val database = WorkoutRepository(context).exportNonEmptyDatabase() ?: return@withLock DriveBackupOutcome.Empty
-            val name = DriveBackupPreferences.get(context).deviceFileName()
-            val client = DriveBackupClient(token)
-            val backups = client.listBackups(deviceFileName = name)
-            val checksum = checksum(database)
-            val latest = backups.firstOrNull()
-            if (latest?.checksum == checksum) return@withLock DriveBackupOutcome.Saved(latest, uploaded = false)
-
-            beforeUpload()
-            val created = client.upload(name, database)
-            check(created.name == name && created.checksum == checksum) { "Drive did not verify the uploaded backup." }
-
-            // Only prune this installation's older snapshots, after verifying the replacement.
-            for (file in backups.filter { it.name == name && it.checksum != null }
-                .drop(BACKUPS_PER_DEVICE - 1)) {
-                try {
-                    client.delete(file)
-                } catch (_: IOException) {
-                    // The new snapshot is already complete. Cleanup can wait until the next upload.
+            WorkoutRepository(context).withDatabaseSnapshot { database ->
+                val name = DriveBackupPreferences.get(context).deviceFileName()
+                val client = DriveBackupClient(token)
+                val backups = client.listBackups(deviceFileName = name)
+                val checksum = checksum(database)
+                val latest = backups.firstOrNull()
+                if (latest?.checksum == checksum) {
+                    return@withDatabaseSnapshot DriveBackupOutcome.Saved(latest, uploaded = false)
                 }
-            }
-            DriveBackupOutcome.Saved(created, uploaded = true)
+
+                beforeUpload()
+                val created = client.upload(name, database)
+                check(created.name == name && created.checksum == checksum) { "Drive did not verify the uploaded backup." }
+
+                // Only prune this installation's older snapshots, after verifying the replacement.
+                for (file in backups.filter { it.name == name && it.checksum != null }.drop(BACKUPS_PER_DEVICE - 1)) {
+                    try {
+                        client.delete(file)
+                    } catch (_: IOException) {
+                        // The new snapshot is already complete. Cleanup can wait until the next upload.
+                    }
+                }
+                DriveBackupOutcome.Saved(created, uploaded = true)
+            } ?: DriveBackupOutcome.Empty
         }
 
     suspend fun restore(context: Context, token: String, file: DriveBackupFile): Int = operation.withLock {
-        val bytes = DriveBackupClient(token).download(file)
-        require(file.checksum == null || checksum(bytes) == file.checksum)
-        val repository = WorkoutRepository(context)
-        if (file.name.endsWith(".json")) repository.restore(bytes.toString(Charsets.UTF_8))
-        else repository.restoreDatabase(bytes)
+        withContext(Dispatchers.IO) {
+            val snapshot = File.createTempFile("gimmer-restore-", ".db", context.cacheDir)
+            try {
+                DriveBackupClient(token).download(file, snapshot)
+                require(file.checksum == null || checksum(snapshot) == file.checksum)
+                val repository = WorkoutRepository(context)
+                if (file.name.endsWith(".json")) repository.restore(snapshot.readText())
+                else repository.restoreDatabase(snapshot)
+            } finally {
+                context.deleteDatabase(snapshot.absolutePath)
+            }
+        }
     }
 
-    private suspend fun checksum(bytes: ByteArray): String = withContext(Dispatchers.Default) {
-        // Drive exposes MD5 for blob integrity checks and identical-snapshot detection.
-        MessageDigest.getInstance("MD5").digest(bytes).joinToString("") { "%02x".format(it) }
+    private suspend fun checksum(file: File): String = withContext(Dispatchers.IO) {
+        val digest = MessageDigest.getInstance("MD5")
+        val buffer = ByteArray(64 * 1024)
+        file.inputStream().use { input ->
+            while (true) {
+                ensureActive()
+                val count = input.read(buffer)
+                if (count < 0) break
+                digest.update(buffer, 0, count)
+            }
+        }
+        digest.digest().joinToString("") { "%02x".format(it) }
     }
 }

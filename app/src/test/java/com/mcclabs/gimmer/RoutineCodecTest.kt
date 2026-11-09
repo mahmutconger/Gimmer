@@ -15,6 +15,25 @@ class RoutineCodecTest {
         assertEquals(program, RoutineCodec.decode("{\"routine\":$json}"))
     }
 
+    @Test fun pairsRemainAdjacentAndOlderProgramsKeepTheirExerciseOrder() {
+        for (day in WorkoutCatalog.days) {
+            assertTrue(day.pairs.isNotEmpty())
+            for (pair in day.pairs) {
+                val index = day.exercises.indexOfFirst { it.id == pair.firstId }
+                assertEquals(pair.secondId, day.exercises[index + 1].id)
+            }
+        }
+        val legacy = WorkoutCatalog.days.map { it.copy(pairs = emptyList()) }
+        val json = RoutineCodec.toJson(legacy)
+        json.getAsJsonArray("days").forEach { it.asJsonObject.remove("pairs") }
+        assertEquals(legacy, RoutineCodec.decode(json))
+
+        val invalid = RoutineCodec.toJson(WorkoutCatalog.days)
+        val pair = invalid.getAsJsonArray("days")[0].asJsonObject.getAsJsonArray("pairs")[0].asJsonArray
+        pair.set(1, pair[0])
+        assertThrows(IllegalArgumentException::class.java) { RoutineCodec.decode(invalid) }
+    }
+
     @Test fun invalidTargetsAndQuotedEquipmentFlagsAreRejected() {
         val json = RoutineCodec.encode(WorkoutCatalog.days)
         assertThrows(IllegalArgumentException::class.java) {

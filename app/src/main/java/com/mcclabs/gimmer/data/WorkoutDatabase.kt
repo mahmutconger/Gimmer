@@ -10,8 +10,8 @@ import com.mcclabs.gimmer.nutrition.NutritionDao
 
 @Database(
     entities = [WorkoutLog::class, BodyweightLog::class, FoodEntry::class, MealLog::class, DailyCondition::class,
-        WorkoutRoutine::class],
-    version = 7,
+        WorkoutRoutine::class, ProgressPhoto::class],
+    version = 8,
     exportSchema = false,
 )
 abstract class WorkoutDatabase : RoomDatabase() {
@@ -20,6 +20,7 @@ abstract class WorkoutDatabase : RoomDatabase() {
     abstract fun nutritionDao(): NutritionDao
     abstract fun dailyConditionDao(): DailyConditionDao
     abstract fun workoutRoutineDao(): WorkoutRoutineDao
+    internal abstract fun progressPhotoDao(): ProgressPhotoDao
 
     companion object {
         @Volatile
@@ -99,7 +100,14 @@ abstract class WorkoutDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_7_8 = object : androidx.room.migration.Migration(7, 8) {
+            override fun migrate(db: androidx.sqlite.db.SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE progress_photos (id TEXT NOT NULL PRIMARY KEY, date TEXT NOT NULL, jpeg BLOB NOT NULL)")
+                db.execSQL("CREATE INDEX index_progress_photos_date ON progress_photos(date)")
+            }
+        }
+
         internal val MIGRATIONS = arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5,
-            MIGRATION_5_6, MIGRATION_6_7)
+            MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8)
     }
 }

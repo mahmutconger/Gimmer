@@ -52,6 +52,7 @@ private enum class Destination(val route: String, val label: String, val icon: I
 
 private const val EXERCISE_HISTORY = "progress/detail/{name}"
 private const val KEYED_EXERCISE_HISTORY = "progress/exercise/{exerciseId}/{name}"
+private const val PROGRESS_PHOTOS = "progress/photos"
 private const val FOOD_SEARCH = "nutrition/food/{meal}/{date}"
 
 @Composable
@@ -74,7 +75,7 @@ fun GimmerApp(viewModel: WorkoutViewModel = viewModel()) {
         modifier = Modifier.fillMaxSize().imePadding(),
         bottomBar = {
             if (currentRoute != EXERCISE_HISTORY && currentRoute != KEYED_EXERCISE_HISTORY &&
-                currentRoute != FOOD_SEARCH && !imeVisible) {
+                currentRoute != FOOD_SEARCH && currentRoute != PROGRESS_PHOTOS && !imeVisible) {
                 GimmerNavigation(currentRoute, viewModel.restTimer) { destination ->
                     if (currentRoute != destination.route) {
                         navController.navigate(destination.route) {
@@ -117,12 +118,17 @@ fun GimmerApp(viewModel: WorkoutViewModel = viewModel()) {
             }
             composable(Destination.Settings.route) { SettingsScreen(viewModel, contentPadding.calculateBottomPadding()) }
             composable(Destination.Progress.route) {
-                ProgressScreen(viewModel, contentPadding.calculateBottomPadding()) { exercise ->
+                ProgressScreen(viewModel, contentPadding.calculateBottomPadding(), onPhotos = {
+                    navController.navigate(PROGRESS_PHOTOS) { launchSingleTop = true }
+                }) { exercise ->
                     val name = Uri.encode(exercise.exerciseName)
                     val route = exercise.exerciseId?.let { "progress/exercise/${Uri.encode(it)}/$name" }
                         ?: "progress/detail/$name"
                     navController.navigate(route)
                 }
+            }
+            composable(PROGRESS_PHOTOS) {
+                ProgressPhotosScreen(viewModel) { navController.popBackStack() }
             }
             composable(EXERCISE_HISTORY, arguments = listOf(navArgument("name") { type = NavType.StringType })) {
                 val name = requireNotNull(it.arguments?.getString("name"))
