@@ -35,7 +35,7 @@ Gimmer is a Turkish-language Android app for hypertrophy training. Log sets quic
 
 - Open an exercise to prefill the weight and reps from your last logged set for that exercise. Use the large plus and minus buttons to adjust weight in 2.5 kg steps and reps one at a time.
 - Log warm-up and working sets separately. Record reps in reserve (RIR) and add a note to any set.
-- Start a rest timer automatically when you save a set. Compound lifts use **180 seconds** and isolation exercises use **90 seconds**. You can also start a timer manually.
+- In the built-in routine, saving the first working set of an **A1/A2 pair** opens the partner exercise. After A2, the timer uses the longer rest duration in the pair. Individual compound lifts use **180 seconds** and isolation exercises use **90 seconds**. You can also start a timer manually.
 - See which plates to load on each side of a standard **20 kg bar**. If the exact target is unavailable, the calculator shows the closest load at or below it.
 
 ### Nutrition and progress
@@ -43,6 +43,7 @@ Gimmer is a Turkish-language Android app for hypertrophy training. Log sets quic
 - Log meals by weight and follow daily calorie, protein, carbohydrate, and fat targets. Look up products by name or barcode through Open Food Facts, or enter foods manually.
 - Review training days on a monthly calendar and chart your progress exercise by exercise. Each data point represents the heaviest working set of the day. Tap it to see the date, weight, and reps.
 - Track body weight over time. Log 4–10 hours of sleep in half-hour increments under **Gelişim → Günlük Durum** (Progress → Daily Status).
+- Add dated photos under **Gelişim → Görsel gelişimi yönet** (Progress → Manage Photo Progress). Browse by month or pinch to zoom in the full-screen viewer. Open the journal with biometric authentication or your device screen lock. Drive backups include the photos and their dates.
 
 ### Routine editing, export, and backup
 

@@ -35,7 +35,7 @@ Gimmer, kas geliştirme antrenmanlarını, öğünlerini ve toparlanma kayıtlar
 
 - Bir hareketi açtığında **son setin ağırlığı ve tekrar sayısı** gelir. Büyük artı ve eksi düğmeleriyle ağırlığı 2,5 kg, tekrarı 1 adım değiştir.
 - Isınma ve çalışma setlerini ayrı kaydet. Her sete **RIR** (yedekte kalan tekrar) ve isteğe bağlı not ekleyebilirsin.
-- Set kaydından sonra dinlenme sayacı bileşik hareketlerde **180 saniye**, izole hareketlerde **90 saniye** başlar. Zamanlayıcıyı elle de kullanabilirsin.
+- Hazır programdaki **A1/A2 çiftlerinde** ilk çalışma setini kaydedince eş hareket açılır. A2’den sonra çiftin daha uzun dinlenme süresi uygulanır. Tekli hareketlerde sayaç bileşik hareketlerde **180 saniye**, izole hareketlerde **90 saniye** başlar. Zamanlayıcıyı elle de kullanabilirsin.
 - Bar hareketinde plaka hesaplayıcıyı aç. **20 kg barın** her tarafına takılacak plakaları gör. Hedef tam yüklenemediğinde, hesaplayıcı hedefi aşmayan en yakın ağırlığı gösterir.
 
 ### Beslenme ve gelişim takibi
@@ -43,6 +43,7 @@ Gimmer, kas geliştirme antrenmanlarını, öğünlerini ve toparlanma kayıtlar
 - Öğünlerini gram olarak kaydet ve günlük kalori, protein, karbonhidrat ve yağ hedeflerini takip et. Open Food Facts üzerinden ürün adı veya barkodla arayabilir ya da besini elle girebilirsin.
 - Antrenman günlerini aylık takvimden incele. Hareket grafiğindeki her nokta o günün en ağır çalışma setini gösterir. Bir noktaya dokunarak tarihi, ağırlığı ve tekrar sayısını birlikte görebilirsin.
 - Vücut ağırlığı geçmişini takip et. **Gelişim → Günlük Durum** bölümünde gece uykunu 4–10 saat arasında, yarım saatlik adımlarla kaydet.
+- **Gelişim → Görsel gelişimi yönet** bölümüne tarihli fotoğraflar ekle. Fotoğrafları aya göre incele ve tam ekranda iki parmakla yakınlaştır. Günlük biyometrik doğrulama veya cihazın ekran kilidiyle açılır. Fotoğraflar ve tarihleri Drive yedeğine dahil edilir.
 
 ### Programı düzenleme ve kayıtları taşıma
 
