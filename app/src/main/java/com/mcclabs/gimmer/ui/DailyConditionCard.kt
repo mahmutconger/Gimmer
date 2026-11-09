@@ -8,11 +8,13 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.mcclabs.gimmer.R
 import com.mcclabs.gimmer.data.DailyCondition
 import com.mcclabs.gimmer.data.MAX_SLEEP_MINUTES
 import com.mcclabs.gimmer.data.MIN_SLEEP_MINUTES
@@ -46,15 +48,16 @@ private fun SleepEntry(date: LocalDate, viewModel: WorkoutViewModel) {
     var saving by remember { mutableStateOf(false) }
     val minutes = draft ?: condition?.sleepMinutes ?: 420
     val duration = sleepDuration(minutes)
+    val sleepDescription = stringResource(R.string.sleep_duration)
     val colors = MaterialTheme.colorScheme
 
     Surface(shape = MaterialTheme.shapes.large, color = colors.surfaceContainer) {
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Icon(Icons.Rounded.Bedtime, contentDescription = null, tint = colors.primary)
-                SectionTitle("Günlük Durum")
+                SectionTitle(stringResource(R.string.daily_condition))
             }
-            Text("Gece Uykusu", style = MaterialTheme.typography.titleSmall)
+            Text(stringResource(R.string.night_sleep), style = MaterialTheme.typography.titleSmall)
             Text(duration, style = MaterialTheme.typography.headlineSmall, color = colors.primary)
             Slider(
                 value = minutes.toFloat(),
@@ -63,13 +66,13 @@ private fun SleepEntry(date: LocalDate, viewModel: WorkoutViewModel) {
                 steps = (MAX_SLEEP_MINUTES - MIN_SLEEP_MINUTES) / SLEEP_STEP_MINUTES - 1,
                 enabled = !saving && state.loaded,
                 modifier = Modifier.semantics {
-                    contentDescription = "Gece uykusu süresi"
+                    contentDescription = sleepDescription
                     stateDescription = duration
                 },
             )
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("4 saat", style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant)
-                Text("10 saat", style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant)
+                Text(stringResource(R.string.hours, 4), style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant)
+                Text(stringResource(R.string.hours, 10), style = MaterialTheme.typography.labelMedium, color = colors.onSurfaceVariant)
             }
             Button(
                 onClick = {
@@ -81,17 +84,19 @@ private fun SleepEntry(date: LocalDate, viewModel: WorkoutViewModel) {
                 modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
             ) {
                 Text(when {
-                    saving -> "Kaydediliyor…"
-                    condition?.sleepMinutes == minutes -> "Uyku kaydedildi"
-                    else -> "Uykuyu kaydet"
+                    saving -> stringResource(R.string.saving)
+                    condition?.sleepMinutes == minutes -> stringResource(R.string.sleep_saved)
+                    else -> stringResource(R.string.save_sleep)
                 })
             }
         }
     }
 }
 
+@Composable
 private fun sleepDuration(minutes: Int): String {
     val hours = minutes / 60
     val remainder = minutes % 60
-    return if (remainder == 0) "$hours saat" else "$hours saat $remainder dk"
+    return if (remainder == 0) stringResource(R.string.hours, hours)
+    else stringResource(R.string.hours_minutes, hours, remainder)
 }

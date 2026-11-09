@@ -29,18 +29,25 @@ import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.DialogWindowProvider
 import androidx.core.view.WindowCompat
+import com.mcclabs.gimmer.R
 import java.text.NumberFormat
 import java.util.Locale
 
-internal val Turkish = Locale.forLanguageTag("tr-TR")
+@Composable
+internal fun appLocale(): Locale = LocalConfiguration.current.locales[0]
 
-internal fun formatMetric(value: Double): String = NumberFormat.getNumberInstance(Turkish).apply {
+@Composable
+internal fun formatMetric(value: Double): String = formatMetric(value, appLocale())
+
+internal fun formatMetric(value: Double, locale: Locale): String = NumberFormat.getNumberInstance(locale).apply {
     maximumFractionDigits = 2
 }.format(value)
 
@@ -59,7 +66,7 @@ internal fun BackHeader(label: String, onBack: () -> Unit) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Surface(shape = CircleShape, color = MaterialTheme.colorScheme.surfaceContainer) {
             IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Geri")
+                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.back))
             }
         }
         Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)

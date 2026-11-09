@@ -13,8 +13,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.mcclabs.gimmer.R
 import java.math.BigDecimal
 
 internal fun parseWeight(value: String): Double? =
@@ -89,36 +92,35 @@ internal fun PlateCalculatorSheet(target: Double?, onDismiss: () -> Unit) {
                 .padding(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            SectionTitle("Plaka hesaplayıcı")
-            Text("20 kg bar · Plakaları iki tarafa eşit tak.",
+            SectionTitle(stringResource(R.string.plate_calculator))
+            Text(stringResource(R.string.bar_description),
                 style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
             when {
-                target == null -> Text("Hesaplamak için ağırlık alanına geçerli bir hedef gir.")
-                load == null -> Text("Standart bar tek başına 20 kg. Hedef en az 20 kg olmalı.")
+                target == null -> Text(stringResource(R.string.enter_target_weight))
+                load == null -> Text(stringResource(R.string.minimum_bar_weight))
                 else -> {
-                    Text("${formatMetric(load.totalWeight)} kg toplam",
+                    Text(stringResource(R.string.total_weight, formatMetric(load.totalWeight)),
                         style = MaterialTheme.typography.headlineMedium, color = colors.primary)
                     if (load.totalWeight != target) {
-                        Text("${formatMetric(target)} kg bu plakalarla tam yüklenemez. " +
-                            "Hedefi aşmayan en yakın ağırlık gösteriliyor.", style = MaterialTheme.typography.bodySmall)
+                        Text(stringResource(R.string.target_weight_unavailable, formatMetric(target)), style = MaterialTheme.typography.bodySmall)
                     }
-                    if (load.plates.isEmpty()) Text("Yalnızca bar yeterli.")
+                    if (load.plates.isEmpty()) Text(stringResource(R.string.bar_only))
                     else {
-                        Text("Her tarafa", style = MaterialTheme.typography.titleSmall)
+                        Text(stringResource(R.string.each_side), style = MaterialTheme.typography.titleSmall)
                         load.plates.forEach { plate ->
                             val tint = lerp(colors.primaryContainer, colors.primary, (plate.kilograms / 20).toFloat() * .35f)
                             Surface(shape = MaterialTheme.shapes.medium, color = tint) {
                                 Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp),
                                     horizontalArrangement = Arrangement.SpaceBetween) {
                                     Text("${formatMetric(plate.kilograms)} kg", style = MaterialTheme.typography.titleMedium)
-                                    Text("${plate.countPerSide} plaka", style = MaterialTheme.typography.bodyMedium)
+                                    Text(pluralStringResource(R.plurals.plate_count, plate.countPerSide, plate.countPerSide), style = MaterialTheme.typography.bodyMedium)
                                 }
                             }
                         }
                     }
                 }
             }
-            OutlinedButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) { Text("Kapat") }
+            OutlinedButton(onClick = onDismiss, modifier = Modifier.fillMaxWidth()) { Text(stringResource(R.string.close)) }
         }
     }
 }

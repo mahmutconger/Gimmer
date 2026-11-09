@@ -1,0 +1,22 @@
+<resources>
+    <string-array name="machine_chest_press_steps">
+        <item>Koltuğu, tutacaklar göğsünün orta hizasına gelecek şekilde ayarla. Ayaklarını yere sağlam bas.</item>
+        <item>Göğsünü yukarıda tut; kürek kemiklerini geriye ve aşağıya sabitle. Belini aşırı çukurlaştırma.</item>
+        <item>Bileklerini düz tutarak tutacakları kontrollü biçimde ileri it. Dirseklerini sertçe kilitleme.</item>
+        <item>Nefes alarak yavaşça başlangıç konumuna dön. Omuzlarını öne düşürme.</item>
+    </string-array>
+
+    <string-array name="lat_pulldown_steps">
+        <item>Diz pedini sabitle ve barı omuz genişliğinden biraz geniş tut.</item>
+        <item>Göğsünü yukarı kaldır; gövdeni hafifçe geriye eğ ve bu açıyı koru.</item>
+        <item>Dirseklerini aşağıya yönlendirerek barı üst göğsüne yaklaştır. Barı ensene çekme.</item>
+        <item>Gövdeni sallamadan barı yavaşça yukarı bırak. Omuz ekleminde ağrı varsa hareketi durdur.</item>
+    </string-array>
+
+    <string-array name="hack_squat_steps">
+        <item>Sırtını ve omuzlarını mindere yasla. Ayaklarını omuz genişliğinde platforma yerleştir.</item>
+        <item>Karnını sık, emniyet kilidini aç ve dizlerini ayak parmaklarınla aynı yöne yönlendir.</item>
+        <item>Topuklarını kaldırmadan, belini minderden ayırmadan kontrollü biçimde alçal.</item>
+        <item>Ayak tabanının tamamından kuvvet alarak yüksel. Dizlerini sertçe kilitleme ve emniyet kilidini kapat.</item>
+    </string-array>
+</resources>

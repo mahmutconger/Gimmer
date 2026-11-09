@@ -1,17 +1,18 @@
 package com.mcclabs.gimmer.backup
 
 import android.content.Context
+import com.mcclabs.gimmer.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import java.util.UUID
 
-internal enum class BackupInterval(val hours: Long, val label: String) {
-    HOURLY(1, "1 saat"),
-    SIX_HOURS(6, "6 saat"),
-    DAILY(24, "24 saat"),
-    WEEKLY(168, "7 gün"),
+internal enum class BackupInterval(val hours: Long, val label: Int) {
+    HOURLY(1, R.string.backup_hourly),
+    SIX_HOURS(6, R.string.backup_six_hours),
+    DAILY(24, R.string.backup_daily),
+    WEEKLY(168, R.string.backup_weekly),
 }
 
 internal enum class BackupStatus {

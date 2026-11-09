@@ -1,5 +1,6 @@
 package com.mcclabs.gimmer
 
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
@@ -9,10 +10,15 @@ import com.mcclabs.gimmer.ui.GimmerApp
 import com.mcclabs.gimmer.ui.theme.GimmerTheme
 
 class MainActivity : ComponentActivity() {
-    override fun attachBaseContext(newBase: android.content.Context) {
-        val configuration = android.content.res.Configuration(newBase.resources.configuration)
-        configuration.setLocales(android.os.LocaleList.forLanguageTags("tr-TR"))
-        super.attachBaseContext(newBase.createConfigurationContext(configuration))
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(newBase.withLanguage(LanguagePreferences(newBase).appLanguage))
+    }
+
+    internal fun setAppLanguage(language: Language) {
+        val preferences = LanguagePreferences(this)
+        if (preferences.appLanguage == language) return
+        preferences.appLanguage = language
+        recreate()
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

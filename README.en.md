@@ -17,7 +17,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-315D9B?style=flat-square" alt="MIT License"></a>
 </p>
 
-Gimmer is a Turkish-language Android app for hypertrophy training. Log sets quickly, track progress for each exercise, record nutrition and sleep, and back up your data to Google Drive.
+Gimmer is an Android app for hypertrophy training. Choose Turkish or English separately for the interface and exercises. Log sets quickly, track progress for each exercise, record nutrition and sleep, and back up your data to Google Drive.
 
 ## Screenshots
 

@@ -33,8 +33,11 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.mcclabs.gimmer.R
 import com.mcclabs.gimmer.data.ProgressPhotoEntry
 import com.mcclabs.gimmer.data.ProgressPhotoImage
 import java.time.Instant
@@ -42,11 +45,7 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
-import java.util.Locale
-import kotlin.math.roundToInt
 
-private val photoDateFormat = DateTimeFormatter.ofPattern("d MMMM yyyy", Locale.forLanguageTag("tr-TR"))
-private val photoMonthFormat = DateTimeFormatter.ofPattern("MMMM yyyy", Locale.forLanguageTag("tr-TR"))
 
 @Composable
 internal fun ProgressPhotosCard(onClick: () -> Unit) {
@@ -60,8 +59,8 @@ internal fun ProgressPhotosCard(onClick: () -> Unit) {
         ) {
             Icon(Icons.Rounded.PhotoLibrary, null, tint = MaterialTheme.colorScheme.primary)
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("Görsel gelişimi yönet", style = MaterialTheme.typography.titleMedium)
-                Text("Tarihli ve kilitli fotoğraf günlüğü", color = MaterialTheme.colorScheme.onSurfaceVariant,
+                Text(stringResource(R.string.manage_progress_photos), style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.locked_photo_journal), color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.bodySmall)
             }
         }
@@ -70,6 +69,8 @@ internal fun ProgressPhotosCard(onClick: () -> Unit) {
 
 @Composable
 internal fun ProgressPhotosScreen(viewModel: WorkoutViewModel, onBack: () -> Unit) {
+    val photoDateFormat = DateTimeFormatter.ofPattern("d MMMM yyyy", appLocale())
+    val photoMonthFormat = DateTimeFormatter.ofPattern("MMMM yyyy", appLocale())
     var pendingUri by rememberSaveable { mutableStateOf<Uri?>(null) }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri -> pendingUri = uri }
 
@@ -86,7 +87,7 @@ internal fun ProgressPhotosScreen(viewModel: WorkoutViewModel, onBack: () -> Uni
             ProgressPhotoViewer(selected, viewModel, { selectedId = null }, { editing = selected }, { deleting = selected })
         } else {
             Column(Modifier.fillMaxSize().padding(horizontal = 20.dp)) {
-                PhotoHeading("Görsel gelişim", "Fotoğraf günlüğün", onBack)
+                PhotoHeading(stringResource(R.string.visual_progress), stringResource(R.string.photo_journal), onBack)
                 Button(
                     onClick = { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
                     enabled = !saving,
@@ -94,12 +95,12 @@ internal fun ProgressPhotosScreen(viewModel: WorkoutViewModel, onBack: () -> Uni
                 ) {
                     Icon(Icons.Rounded.AddAPhoto, null, Modifier.size(20.dp))
                     Spacer(Modifier.width(10.dp))
-                    Text(if (saving) "Fotoğraf kaydediliyor…" else "Fotoğraf ekle")
+                    Text(if (saving) stringResource(R.string.saving_photo) else stringResource(R.string.add_photo))
                 }
                 when {
                     photos == null -> LinearProgressIndicator(Modifier.fillMaxWidth().padding(top = 16.dp))
                     photos.orEmpty().isEmpty() -> Box(Modifier.padding(top = 18.dp)) {
-                        EmptyMessage("Henüz fotoğraf yok", "Galeriden bir fotoğraf seç ve çekildiği günü kaydet.")
+                        EmptyMessage(stringResource(R.string.no_photos), stringResource(R.string.choose_photo))
                     }
                     else -> {
                         val groups = remember(photos) {
@@ -117,7 +118,7 @@ internal fun ProgressPhotosScreen(viewModel: WorkoutViewModel, onBack: () -> Uni
                                         verticalAlignment = Alignment.CenterVertically,
                                     ) {
                                         SectionTitle(month.format(photoMonthFormat))
-                                        Text("${entries.size} fotoğraf", style = MaterialTheme.typography.labelMedium,
+                                        Text(pluralStringResource(R.plurals.photo_count, entries.size, entries.size), style = MaterialTheme.typography.labelMedium,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
                                 }
@@ -133,7 +134,7 @@ internal fun ProgressPhotosScreen(viewModel: WorkoutViewModel, onBack: () -> Uni
                                             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                                                 Text(LocalDate.parse(photo.date).format(photoDateFormat),
                                                     style = MaterialTheme.typography.titleMedium)
-                                                Text("Fotoğrafı aç", style = MaterialTheme.typography.bodySmall,
+                                                Text(stringResource(R.string.open_photo), style = MaterialTheme.typography.bodySmall,
                                                     color = MaterialTheme.colorScheme.primary)
                                             }
                                         }
@@ -163,16 +164,16 @@ internal fun ProgressPhotosScreen(viewModel: WorkoutViewModel, onBack: () -> Uni
         deleting?.let { photo ->
             AlertDialog(
                 onDismissRequest = { deleting = null },
-                title = { Text("Fotoğraf silinsin mi?") },
-                text = { Text("Fotoğraf bu cihazdan kaldırılır. Önceki Drive yedeklerinde bir kopyası kalabilir.") },
+                title = { Text(stringResource(R.string.delete_photo_title)) },
+                text = { Text(stringResource(R.string.delete_photo_description)) },
                 confirmButton = {
                     TextButton(onClick = {
                         viewModel.removeProgressPhoto(photo.id)
                         deleting = null
                         selectedId = null
-                    }) { Text("Sil") }
+                    }) { Text(stringResource(R.string.delete)) }
                 },
-                dismissButton = { TextButton(onClick = { deleting = null }) { Text("Vazgeç") } },
+                dismissButton = { TextButton(onClick = { deleting = null }) { Text(stringResource(R.string.cancel)) } },
             )
         }
     }
@@ -182,7 +183,7 @@ internal fun ProgressPhotosScreen(viewModel: WorkoutViewModel, onBack: () -> Uni
 internal fun PhotoHeading(title: String, subtitle: String, onBack: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 18.dp),
         horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-        IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Geri") }
+        IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.back)) }
         ScreenHeading(title, subtitle)
     }
 }
@@ -200,10 +201,10 @@ private fun PhotoDateDialog(date: LocalDate, onDismiss: () -> Unit, onConfirm: (
     DatePickerDialog(onDismissRequest = onDismiss, confirmButton = {
         TextButton(enabled = state.selectedDateMillis != null, onClick = {
             onConfirm(Instant.ofEpochMilli(checkNotNull(state.selectedDateMillis)).atOffset(ZoneOffset.UTC).toLocalDate())
-        }) { Text("Kaydet") }
+        }) { Text(stringResource(R.string.save)) }
     }, dismissButton = {
-        TextButton(onClick = onDismiss) { Text("Vazgeç") }
-    }) { DatePicker(state, title = { Text("Fotoğraf tarihi", Modifier.padding(start = 24.dp, top = 16.dp)) }) }
+        TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
+    }) { DatePicker(state, title = { Text(stringResource(R.string.photo_date), Modifier.padding(start = 24.dp, top = 16.dp)) }) }
 }
 
 @Composable
@@ -216,7 +217,7 @@ private fun PhotoBitmap(id: String, viewModel: WorkoutViewModel, fullSize: Boole
     val image = bitmap
     if (image != null) content(image)
     else Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        if (loaded) Icon(Icons.Rounded.PhotoLibrary, "Fotoğraf açılamadı")
+        if (loaded) Icon(Icons.Rounded.PhotoLibrary, stringResource(R.string.photo_open_failed))
         else CircularProgressIndicator(Modifier.size(24.dp))
     }
 }
@@ -225,14 +226,16 @@ private fun PhotoBitmap(id: String, viewModel: WorkoutViewModel, fullSize: Boole
 private fun ProgressPhotoViewer(
     photo: ProgressPhotoEntry, viewModel: WorkoutViewModel, onBack: () -> Unit, onEdit: () -> Unit, onDelete: () -> Unit,
 ) {
+    val percent = java.text.NumberFormat.getPercentInstance(appLocale())
+    val photoDateFormat = DateTimeFormatter.ofPattern("d MMMM yyyy", appLocale())
     var scale by remember(photo.id) { mutableFloatStateOf(1f) }
     var offset by remember(photo.id) { mutableStateOf(Offset.Zero) }
     Column(Modifier.fillMaxSize().padding(horizontal = 16.dp)) {
-        PhotoHeading("Fotoğraf", LocalDate.parse(photo.date).format(photoDateFormat), onBack)
+        PhotoHeading(stringResource(R.string.photo), LocalDate.parse(photo.date).format(photoDateFormat), onBack)
         Surface(Modifier.weight(1f).fillMaxWidth(), shape = MaterialTheme.shapes.large, color = Color.Black) {
             PhotoBitmap(photo.id, viewModel, true) { bitmap ->
                 Image(
-                    bitmap.asImageBitmap(), "Gelişim fotoğrafı",
+                    bitmap.asImageBitmap(), stringResource(R.string.progress_photo),
                     Modifier.fillMaxSize().clipToBounds()
                         .pointerInput(photo.id) {
                             detectTransformGestures { centroid, pan, zoom, _ ->
@@ -265,14 +268,14 @@ private fun ProgressPhotoViewer(
             }
         }
         Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(if (scale == 1f) "İki parmakla yakınlaştır" else "%${(scale * 100).roundToInt()}",
+            Text(if (scale == 1f) stringResource(R.string.pinch_to_zoom) else percent.format(scale.toDouble()),
                 Modifier.weight(1f), style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             IconButton(enabled = scale != 1f, onClick = { scale = 1f; offset = Offset.Zero }) {
-                Icon(Icons.Rounded.ZoomOutMap, "Yakınlaştırmayı sıfırla")
+                Icon(Icons.Rounded.ZoomOutMap, stringResource(R.string.reset_zoom))
             }
-            IconButton(onClick = onEdit) { Icon(Icons.Rounded.CalendarMonth, "Tarihi değiştir") }
-            IconButton(onClick = onDelete) { Icon(Icons.Rounded.DeleteOutline, "Fotoğrafı sil") }
+            IconButton(onClick = onEdit) { Icon(Icons.Rounded.CalendarMonth, stringResource(R.string.change_date)) }
+            IconButton(onClick = onDelete) { Icon(Icons.Rounded.DeleteOutline, stringResource(R.string.delete_photo)) }
         }
     }
 }

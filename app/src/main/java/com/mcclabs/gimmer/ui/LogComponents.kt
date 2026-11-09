@@ -12,11 +12,13 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.mcclabs.gimmer.R
 import com.mcclabs.gimmer.data.WorkoutLog
-import com.mcclabs.gimmer.data.WorkoutCatalog
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -31,37 +33,37 @@ fun PerformanceFields(
 ) {
     val numericWeight = parseWeight(weight) ?: 0.0
     val numericReps = reps.toIntOrNull()?.coerceIn(0, 10_000) ?: 0
-    StepperInput("Ağırlık (kg)", weight, onWeight,
+    StepperInput(stringResource(R.string.weight_kg), weight, onWeight,
         onDecrease = { onWeight(stepWeight(weight, -2.5)) },
         onIncrease = { onWeight(stepWeight(weight, 2.5)) },
         decreaseEnabled = numericWeight > 0, increaseEnabled = numericWeight < 10_000,
         keyboardType = KeyboardType.Decimal,
-        decreaseLabel = "Ağırlığı 2,5 kg azalt", increaseLabel = "Ağırlığı 2,5 kg artır",
+        decreaseLabel = stringResource(R.string.less_weight), increaseLabel = stringResource(R.string.more_weight),
         trailingIcon = onPlateCalculator?.let { onClick ->
-            { IconButton(onClick = onClick, enabled = valuesEnabled) { Icon(Icons.Rounded.FitnessCenter, "Plaka hesaplayıcı") } }
+            { IconButton(onClick = onClick, enabled = valuesEnabled) { Icon(Icons.Rounded.FitnessCenter, stringResource(R.string.plate_calculator)) } }
         },
         enabled = valuesEnabled)
-    StepperInput("Tekrar", reps, onReps,
+    StepperInput(stringResource(R.string.reps), reps, onReps,
         onDecrease = { onReps((numericReps - 1).toString()) },
         onIncrease = { onReps((numericReps + 1).toString()) },
         decreaseEnabled = numericReps > 1, increaseEnabled = numericReps < 10_000,
-        keyboardType = KeyboardType.Number, decreaseLabel = "Tekrarı azalt", increaseLabel = "Tekrarı artır",
+        keyboardType = KeyboardType.Number, decreaseLabel = stringResource(R.string.less_reps), increaseLabel = stringResource(R.string.more_reps),
         enabled = valuesEnabled)
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        PillChip("Çalışma", !isWarmup, onClick = { onWarmup(false) })
-        PillChip("Isınma", isWarmup, onClick = { onWarmup(true) })
+        PillChip(stringResource(R.string.working), !isWarmup, onClick = { onWarmup(false) })
+        PillChip(stringResource(R.string.warmup), isWarmup, onClick = { onWarmup(true) })
     }
-    Text("RIR · Yedekte kalan tekrar", style = MaterialTheme.typography.labelLarge)
+    Text(stringResource(R.string.rir_explanation), style = MaterialTheme.typography.labelLarge)
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         (0..4).forEach { value ->
             PillChip(value.toString(), rir == value, onClick = { onRir(value) })
         }
     }
     if (rir == null) {
-        Text("Bu eski kayıtta RIR girilmemiş.", style = MaterialTheme.typography.bodySmall,
+        Text(stringResource(R.string.old_rir), style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
-    GimmerField(note, { if (it.length <= 2000) onNote(it) }, label = "Not (isteğe bağlı)",
+    GimmerField(note, { if (it.length <= 2000) onNote(it) }, label = stringResource(R.string.optional_note),
         modifier = Modifier.fillMaxWidth(), singleLine = false, maxLines = 4)
 }
 
@@ -72,25 +74,26 @@ internal fun validPerformance(weight: String, reps: String): Boolean {
 @Composable
 fun LogRow(log: WorkoutLog, showContext: Boolean = false, onClick: () -> Unit) {
     val colors = MaterialTheme.colorScheme
-    val date = remember(log.dateTimestamp) { formatSessionDate(log.dateTimestamp) }
+    val date = formatSessionDate(log.dateTimestamp)
     Surface(onClick = onClick, modifier = Modifier.fillMaxWidth(), shape = MaterialTheme.shapes.medium,
         color = colors.surfaceContainer) {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("${if (log.isWarmup) "Isınma" else "Çalışma"} · $date",
+                val setType = stringResource(if (log.isWarmup) R.string.warmup else R.string.working)
+                Text("$setType · $date",
                     color = if (log.isWarmup) colors.onSurfaceVariant else colors.primary,
                     style = MaterialTheme.typography.labelMedium)
-                val sets = if (log.sets > 1) " · ${log.sets} set" else ""
-                Text("${formatMetric(log.weight)} kg · ${log.reps} tekrar$sets",
+                val sets = if (log.sets > 1) " · ${pluralStringResource(R.plurals.set_count, log.sets, log.sets)}" else ""
+                Text("${formatMetric(log.weight)} kg · ${pluralStringResource(R.plurals.rep_count, log.reps, log.reps)}$sets",
                     style = MaterialTheme.typography.titleMedium)
-                val context = if (showContext) listOf(log.dayName, log.muscleGroup).filter { it.isNotBlank() }
+                val context = if (showContext) listOf(workoutDayName(log.dayName), exerciseGroup(log.muscleGroup)).filter { it.isNotBlank() }
                     else emptyList()
                 Text((context + "RIR ${log.rir ?: "—"}").joinToString(" · "),
                     style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
                 log.note?.takeIf { it.isNotBlank() }?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
             }
-            Icon(Icons.Rounded.Edit, contentDescription = "Kaydı düzenle", tint = colors.primary,
+            Icon(Icons.Rounded.Edit, contentDescription = stringResource(R.string.edit_record), tint = colors.primary,
                 modifier = Modifier.size(18.dp))
         }
     }
@@ -99,10 +102,8 @@ fun LogRow(log: WorkoutLog, showContext: Boolean = false, onClick: () -> Unit) {
 @Composable
 fun EditLogDialog(log: WorkoutLog, viewModel: WorkoutViewModel, onDismiss: () -> Unit) {
     val days by viewModel.days.collectAsStateWithLifecycle()
-    val displayName = remember(days, log.exerciseId, log.exerciseName) {
-        days.orEmpty().asSequence().flatMap { it.exercises.asSequence() }
-            .firstOrNull { it.id == log.exerciseId }?.displayName ?: WorkoutCatalog.displayName(log.exerciseName)
-    }
+    val exercises = remember(days) { days.orEmpty().flatMap { it.exercises } }
+    val displayName = loggedExerciseName(log.exerciseName, log.exerciseId, exercises, LocalExerciseLanguage.current)
     var weight by rememberSaveable(log.id) { mutableStateOf(log.weight.toString()) }
     var reps by rememberSaveable(log.id) { mutableStateOf(log.reps.toString()) }
     var rir by rememberSaveable(log.id) { mutableStateOf(log.rir) }
@@ -114,8 +115,8 @@ fun EditLogDialog(log: WorkoutLog, viewModel: WorkoutViewModel, onDismiss: () ->
     if (deleting) {
         AlertDialog(
             onDismissRequest = { if (!saving) deleting = false },
-            title = { Text("Kayıt silinsin mi?") },
-            text = { Text("$displayName için bu set kaydı kalıcı olarak silinecek.") },
+            title = { Text(stringResource(R.string.delete_record_title)) },
+            text = { Text(stringResource(R.string.delete_set_description, displayName)) },
             confirmButton = {
                 Button(
                     enabled = !saving,
@@ -127,10 +128,10 @@ fun EditLogDialog(log: WorkoutLog, viewModel: WorkoutViewModel, onDismiss: () ->
                         saving = true
                         viewModel.deleteLog(log, onDismiss).invokeOnCompletion { saving = false }
                     },
-                ) { Text(if (saving) "Siliniyor…" else "Kaydı sil") }
+                ) { Text(if (saving) stringResource(R.string.deleting) else stringResource(R.string.delete_record)) }
             },
             dismissButton = {
-                TextButton(onClick = { deleting = false }, enabled = !saving) { Text("Vazgeç") }
+                TextButton(onClick = { deleting = false }, enabled = !saving) { Text(stringResource(R.string.cancel)) }
             },
         )
     } else {
@@ -140,12 +141,12 @@ fun EditLogDialog(log: WorkoutLog, viewModel: WorkoutViewModel, onDismiss: () ->
                     .padding(start = 20.dp, end = 20.dp, bottom = 24.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp),
             ) {
-                Text("Kaydı düzenle", style = MaterialTheme.typography.headlineSmall)
+                Text(stringResource(R.string.edit_record), style = MaterialTheme.typography.headlineSmall)
                 Text(displayName, style = MaterialTheme.typography.titleMedium)
                 Text(formatSessionDate(log.dateTimestamp), style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 if (log.sets > 1) {
-                    Text("Bu kayıt ${log.sets} set içeriyor.", style = MaterialTheme.typography.bodySmall)
+                    Text(pluralStringResource(R.plurals.record_set_count, log.sets, log.sets), style = MaterialTheme.typography.bodySmall)
                 }
                 PerformanceFields(weight, reps, rir, isWarmup, note, { weight = it }, { reps = it },
                     { rir = it }, { isWarmup = it }, { note = it })
@@ -158,20 +159,19 @@ fun EditLogDialog(log: WorkoutLog, viewModel: WorkoutViewModel, onDismiss: () ->
                         viewModel.updateLog(updated, onDismiss).invokeOnCompletion { saving = false }
                     },
                     modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-                ) { Text(if (saving) "Kaydediliyor…" else "Değişiklikleri kaydet") }
+                ) { Text(if (saving) stringResource(R.string.saving) else stringResource(R.string.save_changes)) }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     TextButton(onClick = { deleting = true }, enabled = !saving,
                         colors = ButtonDefaults.textButtonColors(contentColor = MaterialTheme.colorScheme.error)) {
-                        Text("Kaydı sil")
+                        Text(stringResource(R.string.delete_record))
                     }
-                    TextButton(onClick = onDismiss, enabled = !saving) { Text("Vazgeç") }
+                    TextButton(onClick = onDismiss, enabled = !saving) { Text(stringResource(R.string.cancel)) }
                 }
             }
         }
     }
 }
 
-private val SessionDate = DateTimeFormatter.ofPattern("dd MMM yyyy · HH:mm", Turkish)
-
+@Composable
 internal fun formatSessionDate(timestamp: Long): String =
-    SessionDate.format(Instant.ofEpochMilli(timestamp).atZone(ZoneId.systemDefault()))
+    DateTimeFormatter.ofPattern("dd MMM yyyy · HH:mm", appLocale()).format(Instant.ofEpochMilli(timestamp).atZone(ZoneId.systemDefault()))

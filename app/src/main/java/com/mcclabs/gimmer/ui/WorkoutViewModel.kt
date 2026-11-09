@@ -9,6 +9,9 @@ import android.os.VibratorManager
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import com.mcclabs.gimmer.Language
+import com.mcclabs.gimmer.LanguagePreferences
+import com.mcclabs.gimmer.R
 import com.mcclabs.gimmer.data.*
 import com.mcclabs.gimmer.backup.*
 import java.time.LocalDate
@@ -21,6 +24,8 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+internal class UiMessage(val id: Int, vararg val arguments: Any)
 
 data class LogFilter(val query: String = "", val day: String = "", val muscle: String = "",
     val includeWarmups: Boolean = false)
@@ -57,10 +62,19 @@ internal fun dailyExerciseProgress(logs: List<WorkoutLog>, zone: ZoneId): List<D
 
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class, kotlinx.coroutines.FlowPreview::class)
 class WorkoutViewModel(application: Application, savedState: SavedStateHandle) : AndroidViewModel(application) {
+    private val languagePreferences = LanguagePreferences(application)
+    private val selectedExerciseLanguage = MutableStateFlow(languagePreferences.exerciseLanguage)
+    internal val exerciseLanguage = selectedExerciseLanguage.asStateFlow()
+
+    internal fun setExerciseLanguage(language: Language) {
+        languagePreferences.exerciseLanguage = language
+        selectedExerciseLanguage.value = language
+    }
+
     private val repository = WorkoutRepository(application)
     private val drivePreferences = DriveBackupPreferences.get(application)
-    private val eventChannel = Channel<String>(Channel.BUFFERED)
-    val messages = eventChannel.receiveAsFlow()
+    private val eventChannel = Channel<UiMessage>(Channel.BUFFERED)
+    internal val messages = eventChannel.receiveAsFlow()
     val restTimer = RestTimer(savedState, viewModelScope) {
         runCatching {
             val vibrator = if (Build.VERSION.SDK_INT >= 31)
@@ -78,9 +92,15 @@ class WorkoutViewModel(application: Application, savedState: SavedStateHandle) :
     val progressSummaries = combine(searchQuery, selectedFilters, days) { query, options, routine ->
             options.copy(query = query) to routine.orEmpty()
         }.flatMapLatest { (options, routine) ->
-            val query = options.query.lowercase(Turkish)
+            val turkishQuery = options.query.lowercase(Language.Turkish.locale)
+            val englishQuery = options.query.lowercase(Language.English.locale)
             val matches = (WorkoutCatalog.exercisesById.values + routine.flatMap { it.exercises })
-                .filter { exercise -> query.isNotEmpty() && exercise.displayName.lowercase(Turkish).contains(query) }
+                .filter { exercise ->
+                    options.query.isNotEmpty() && (
+                        exercise.displayName.lowercase(Language.Turkish.locale).contains(turkishQuery) ||
+                            exercise.name.lowercase(Language.English.locale).contains(englishQuery)
+                    )
+                }
             repository.summaries(options.query, options.day, options.muscle, options.includeWarmups, matches)
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), null)
     val exportedJson = MutableStateFlow("")
@@ -135,15 +155,15 @@ class WorkoutViewModel(application: Application, savedState: SavedStateHandle) :
         )
     }.flowOn(Dispatchers.Default)
 
-    private fun perform(success: String, block: suspend () -> Unit) = viewModelScope.launch {
-        try { block(); eventChannel.send(success) }
+    private fun perform(success: Int, block: suspend () -> Unit) = viewModelScope.launch {
+        try { block(); eventChannel.send(UiMessage(success)) }
         catch (error: CancellationException) { throw error }
-        catch (error: Exception) { eventChannel.send("İşlem tamamlanamadı. Lütfen yeniden deneyin.") }
+        catch (error: Exception) { eventChannel.send(UiMessage(R.string.operation_failed)) }
     }
 
     fun saveWorkout(exercise: Exercise, dayName: String, weight: Double, reps: Int, rir: Int,
         isWarmup: Boolean, note: String?, partner: Exercise? = null, firstInPair: Boolean = false,
-        onSaved: (Exercise?) -> Unit) = perform("Set kaydedildi.") {
+        onSaved: (Exercise?) -> Unit) = perform(R.string.set_saved) {
         require(rir in 0..4)
         val now = Instant.now()
         val zone = ZoneId.systemDefault()
@@ -163,32 +183,32 @@ class WorkoutViewModel(application: Application, savedState: SavedStateHandle) :
         }
         onSaved(next)
     }
-    fun saveBodyweight(weight: Double, onSaved: () -> Unit) = perform("Vücut ağırlığı kaydedildi.") {
+    fun saveBodyweight(weight: Double, onSaved: () -> Unit) = perform(R.string.body_weight_saved) {
         repository.saveBodyweight(BodyweightLog(LocalDate.now().toString(), weight))
         onSaved()
     }
     fun dailyCondition(date: LocalDate) = repository.dailyCondition(date.toString())
 
-    fun saveSleep(date: LocalDate, minutes: Int) = perform("Gece uykusu kaydedildi.") {
+    fun saveSleep(date: LocalDate, minutes: Int) = perform(R.string.night_sleep_saved) {
         repository.saveDailyCondition(DailyCondition(date.toString(), minutes))
     }
 
-    fun replaceRoutine(days: List<WorkoutDay>, onSaved: () -> Unit) = perform("Antrenman programı güncellendi.") {
+    fun replaceRoutine(days: List<WorkoutDay>, onSaved: () -> Unit) = perform(R.string.routine_updated) {
         repository.replaceRoutine(days)
         onSaved()
     }
-    fun updateLog(log: WorkoutLog, onSaved: () -> Unit) = perform("Kayıt güncellendi.") {
+    fun updateLog(log: WorkoutLog, onSaved: () -> Unit) = perform(R.string.record_updated) {
         repository.update(log); onSaved()
     }
-    fun deleteLog(log: WorkoutLog, onDeleted: () -> Unit) = perform("Kayıt silindi.") {
+    fun deleteLog(log: WorkoutLog, onDeleted: () -> Unit) = perform(R.string.record_deleted) {
         repository.delete(log); onDeleted()
     }
-    fun prepareExport() = perform("Veriler dışa aktarıldı.") { exportedJson.value = repository.exportAsJson() }
+    fun prepareExport() = perform(R.string.export_complete) { exportedJson.value = repository.exportAsJson() }
 
     fun saveJsonDocument(uri: Uri) {
         if (savingJson.value) return
         savingJson.value = true
-        perform("JSON dosyası kaydedildi.") {
+        perform(R.string.json_saved) {
             val json = repository.exportAsJson()
             withContext(Dispatchers.IO) {
                 val resolver = getApplication<Application>().contentResolver
@@ -205,15 +225,15 @@ class WorkoutViewModel(application: Application, savedState: SavedStateHandle) :
 
     internal fun addProgressPhoto(uri: Uri, date: LocalDate) {
         if (!savingPhoto.compareAndSet(expect = false, update = true)) return
-        perform("Fotoğraf kaydedildi.") { repository.addPhoto(uri, date) }
+        perform(R.string.photo_saved) { repository.addPhoto(uri, date) }
             .invokeOnCompletion { savingPhoto.value = false }
     }
 
     internal fun changePhotoDate(id: String, date: LocalDate) =
-        perform("Fotoğraf tarihi güncellendi.") { repository.updatePhotoDate(id, date) }
+        perform(R.string.photo_date_updated) { repository.updatePhotoDate(id, date) }
 
     internal fun removeProgressPhoto(id: String) =
-        perform("Fotoğraf silindi.") { repository.deletePhoto(id) }
+        perform(R.string.photo_deleted) { repository.deletePhoto(id) }
 
     internal fun enableAutomaticBackup(account: String) = driveAction {
         val interval = automaticBackup.value.interval
@@ -226,13 +246,13 @@ class WorkoutViewModel(application: Application, savedState: SavedStateHandle) :
             drivePreferences.report(account, BackupStatus.FAILED)
             throw error
         }
-        "Otomatik Drive yedeklemesi açıldı."
+        UiMessage(R.string.backup_enabled)
     }
 
     internal fun disableAutomaticBackup() = driveAction {
         drivePreferences.configure(null, automaticBackup.value.interval)
         scheduleDriveBackup(getApplication(), null)
-        "Otomatik Drive yedeklemesi kapatıldı."
+        UiMessage(R.string.backup_disabled)
     }
 
     internal fun setBackupInterval(interval: BackupInterval) = driveAction {
@@ -246,16 +266,16 @@ class WorkoutViewModel(application: Application, savedState: SavedStateHandle) :
         val result = DriveBackupCoordinator.backup(getApplication(), token)
         if (account != null) drivePreferences.report(account, result.status, result.backupTimestamp)
         when (result) {
-            DriveBackupOutcome.Empty -> "Yedeklenecek kayıt bulunamadı."
-            is DriveBackupOutcome.Saved -> if (result.uploaded) "Google Drive yedeği oluşturuldu."
-                else "Drive yedeğin zaten güncel."
+            DriveBackupOutcome.Empty -> UiMessage(R.string.backup_empty)
+            is DriveBackupOutcome.Saved -> if (result.uploaded) UiMessage(R.string.drive_backup_created)
+                else UiMessage(R.string.drive_backup_current)
         }
     }
 
     internal fun listDriveBackups(token: String) = driveAction {
         val files = DriveBackupClient(token).listBackups()
         if (files.isEmpty()) {
-            "Bu Google hesabında Gimmer yedeği bulunamadı."
+            UiMessage(R.string.drive_backup_missing)
         } else {
             val deviceFileName = drivePreferences.deviceFileName()
             restoreToken = token
@@ -275,11 +295,11 @@ class WorkoutViewModel(application: Application, savedState: SavedStateHandle) :
         driveAction {
             dismissRestoreOptions()
             val count = DriveBackupCoordinator.restore(getApplication(), token, file)
-            "$count yeni kayıt geri yüklendi."
+            UiMessage(R.string.restore_count, count)
         }
     }
 
-    private fun driveAction(block: suspend () -> String?) {
+    private fun driveAction(block: suspend () -> UiMessage?) {
         if (cloudBusy.value) return
         cloudBusy.value = true
         viewModelScope.launch {
@@ -287,7 +307,7 @@ class WorkoutViewModel(application: Application, savedState: SavedStateHandle) :
                 block()?.let { eventChannel.send(it) }
             } catch (error: CancellationException) { throw error }
             catch (error: Exception) {
-                eventChannel.send("Drive işlemi tamamlanamadı. Bağlantınızı ve hesap izinlerini kontrol edin.")
+                eventChannel.send(UiMessage(R.string.drive_action_failed))
             } finally { cloudBusy.value = false }
         }
     }

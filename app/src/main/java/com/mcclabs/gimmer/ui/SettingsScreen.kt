@@ -14,10 +14,12 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.mcclabs.gimmer.R
 import java.time.LocalDate
 
 @Composable
@@ -25,7 +27,7 @@ fun SettingsScreen(viewModel: WorkoutViewModel, bottomSpace: Dp) {
     val context = LocalContext.current
     val json by viewModel.exportedJson.collectAsStateWithLifecycle()
     val saving by viewModel.savingJson.collectAsStateWithLifecycle()
-    var copyStatus by rememberSaveable { mutableStateOf("") }
+    var copyStatus by rememberSaveable { mutableStateOf<Int?>(null) }
     val createDocument = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) {
         it?.let(viewModel::saveJsonDocument)
     }
@@ -34,35 +36,36 @@ fun SettingsScreen(viewModel: WorkoutViewModel, bottomSpace: Dp) {
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp).padding(bottom = bottomSpace),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
-        ScreenHeading("Ayarlar", "Verilerini yedekle ve dışa aktar.")
+        ScreenHeading(stringResource(R.string.settings), stringResource(R.string.settings_description))
+        LanguageSettings(viewModel)
         DriveSettings(viewModel)
         RoutineSettings(viewModel)
-        SettingsCard("Veri aktarımı", "Antrenman, beslenme ve ölçüm geçmişini dışa aktar. Gelişim fotoğrafları Drive yedeğine eklenir.") {
+        SettingsCard(stringResource(R.string.data_export), stringResource(R.string.data_export_description)) {
             Button(
-                onClick = { createDocument.launch("gimmer-yedek-${LocalDate.now()}.json") },
+                onClick = { createDocument.launch(context.getString(R.string.backup_filename, LocalDate.now().toString())) },
                 enabled = !saving,
                 modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-            ) { Text(if (saving) "Dosya kaydediliyor…" else "JSON dosyasını indir") }
+            ) { Text(if (saving) stringResource(R.string.saving_file) else stringResource(R.string.download_json)) }
             OutlinedButton(onClick = {
-                copyStatus = ""
+                copyStatus = null
                 viewModel.prepareExport()
             }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
-                Text("JSON önizlemesini göster")
+                Text(stringResource(R.string.show_json_preview))
             }
             if (json.isNotBlank()) {
                 OutlinedButton(onClick = {
                     val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                     copyStatus = try {
-                        clipboard.setPrimaryClip(ClipData.newPlainText("Gimmer kayıtları", json))
-                        "JSON panoya kopyalandı."
+                        clipboard.setPrimaryClip(ClipData.newPlainText(context.getString(R.string.clipboard_logs), json))
+                        R.string.json_copied
                     } catch (_: RuntimeException) {
-                        "Panoya kopyalanamadı. JSON dosyasını indirebilirsin."
+                        R.string.json_copy_failed
                     }
-                }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("Panoya kopyala") }
+                }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text(stringResource(R.string.copy_clipboard)) }
 
-                if (copyStatus.isNotBlank()) Text(copyStatus, style = MaterialTheme.typography.bodySmall)
+                copyStatus?.let { Text(stringResource(it), style = MaterialTheme.typography.bodySmall) }
                 val preview = remember(json) { if (json.length > 4000) json.take(4000) + "\n…" else json }
-                Text("JSON önizlemesi", style = MaterialTheme.typography.titleSmall)
+                Text(stringResource(R.string.json_preview), style = MaterialTheme.typography.titleSmall)
                 Surface(
                     color = MaterialTheme.colorScheme.surfaceContainerHigh,
                     shape = MaterialTheme.shapes.medium,

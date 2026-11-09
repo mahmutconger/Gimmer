@@ -49,14 +49,14 @@ V2 JSON belgeleri de okunabilir. İçe aktarma 10 MB ile sınırlıdır.
 
 ## Sayaç ve arayüz
 
-Set kaydından sonra bileşik hareketlerde 180, izole hareketlerde 90 saniyelik dinlenme sayacı başlar.
+Tekli hareketlerde bileşik setten sonra 180, izole setten sonra 90 saniyelik dinlenme sayacı başlar. A1/A2 çiftlerinde sayaç A2’den sonra çiftin daha uzun süresiyle başlar.
 Elle başlatılan sayaç için 90, 120 ve 180 saniye seçilebilir.
 Sayaç monotonic elapsedRealtime son zamanını kullanır, sekme değişiminde ve döndürmede korunur.
 SavedStateHandle, Android'in kaydettiği etkinlik durumundan geri dönüşü destekler.
 Süre dolunca görsel bildirim ve destekleyen cihazda kısa titreşim oluşur.
 Arka plan servisi/alarm kullanılmaz; uygulama öldürülmüşken tam zamanında arka plan alarmı garanti edilmez.
 
-Uygulama Türkçe arayüz ve Material 3 koyu tema kullanır. Hazır hareketlerin görünen adları Türkçedir.
+Uygulama Material 3 koyu tema kullanır. Arayüz ve hazır hareket adları için Türkçe veya İngilizce ayrı ayrı seçilebilir.
 Machine Chest Press, Lat Pulldown ve Hack Squat için Türkçe form adımları bulunur.
 Set/tekrar hedefleri önceki sürümdeki örnek program değerleridir.
 

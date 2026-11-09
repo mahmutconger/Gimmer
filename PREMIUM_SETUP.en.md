@@ -31,11 +31,11 @@ JSON exports include `schemaVersion`, `weightUnit`, `sessions`, `bodyweights`, `
 
 ## Rest timer and interface
 
-Saving a set starts a rest timer of 180 seconds for compound lifts and 90 seconds for isolation exercises. Manual presets are 90, 120, and 180 seconds.
+Individual compound sets start a 180-second timer and isolation sets start a 90-second timer. After A2 in a paired set, the timer uses the longer rest duration in the pair. Manual presets are 90, 120, and 180 seconds.
 
 The timer uses a deadline based on monotonic `elapsedRealtime`, so it persists across tab changes and screen rotation. `SavedStateHandle` supports restoration from Android's saved activity state. When time is up, the app displays an indicator and vibrates briefly on supported devices. The timer runs without a background service or an alarm, so it may miss the deadline if Android stops the app process.
 
-Gimmer uses a Turkish interface and a Material 3 dark theme. Built-in exercises use Turkish display names, with Turkish form cues for the machine chest press, lat pulldown, and hack squat. The set and rep targets come from the sample routine in earlier versions.
+Gimmer uses a Material 3 dark theme. You can choose Turkish or English independently for the interface and built-in exercise names. Form cues are available for the machine chest press, lat pulldown, and hack squat. The set and rep targets come from the sample routine in earlier versions.
 
 ## Verification
 

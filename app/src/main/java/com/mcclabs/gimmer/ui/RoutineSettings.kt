@@ -13,8 +13,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.mcclabs.gimmer.R
 import com.mcclabs.gimmer.data.RoutineCodec
 import com.mcclabs.gimmer.data.WorkoutDay
 import kotlinx.coroutines.CancellationException
@@ -29,11 +32,11 @@ internal fun RoutineSettings(viewModel: WorkoutViewModel) {
     val scope = rememberCoroutineScope()
     val clipboard = remember(context) { context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager }
     var showImport by rememberSaveable { mutableStateOf(false) }
-    var status by rememberSaveable { mutableStateOf("") }
+    var status by rememberSaveable { mutableStateOf<Int?>(null) }
 
-    SettingsCard("Antrenman programı", "Programını JSON olarak kopyala veya düzenlediğin programı içe aktar.") {
+    SettingsCard(stringResource(R.string.routine), stringResource(R.string.routine_description)) {
         Button(onClick = { showImport = true }, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
-            Text("Program JSON’u içe aktar")
+            Text(stringResource(R.string.import_routine))
         }
         OutlinedButton(
             onClick = {
@@ -41,17 +44,17 @@ internal fun RoutineSettings(viewModel: WorkoutViewModel) {
                 scope.launch {
                     val json = withContext(Dispatchers.Default) { RoutineCodec.encode(routine) }
                     status = try {
-                        clipboard.setPrimaryClip(ClipData.newPlainText("Antrenman programı", json))
-                        "Program JSON’u panoya kopyalandı."
+                        clipboard.setPrimaryClip(ClipData.newPlainText(context.getString(R.string.routine), json))
+                        R.string.routine_copied
                     } catch (_: RuntimeException) {
-                        "Program panoya kopyalanamadı."
+                        R.string.routine_copy_failed
                     }
                 }
             },
             enabled = days != null,
             modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-        ) { Text("Program JSON’unu kopyala") }
-        if (status.isNotEmpty()) Text(status, style = MaterialTheme.typography.bodySmall)
+        ) { Text(stringResource(R.string.copy_routine)) }
+        status?.let { Text(stringResource(it), style = MaterialTheme.typography.bodySmall) }
     }
     if (showImport) RoutineImportSheet(viewModel, clipboard) { showImport = false }
 }
@@ -66,16 +69,16 @@ private fun RoutineImportSheet(
     var draft by rememberSaveable { mutableStateOf("") }
     var preview by remember { mutableStateOf<List<WorkoutDay>?>(null) }
     var busy by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf<Int?>(null) }
 
     fun changeDraft(value: String) {
         if (busy) return
         preview = null
         if (value.length <= RoutineCodec.MAX_JSON_LENGTH) {
             draft = value
-            error = ""
+            error = null
         } else {
-            error = "Program JSON’u çok büyük."
+            error = R.string.routine_too_large
         }
     }
 
@@ -86,22 +89,22 @@ private fun RoutineImportSheet(
                 .padding(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
-            SectionTitle("Program JSON’u içe aktar")
+            SectionTitle(stringResource(R.string.import_routine))
             val candidate = preview
             if (candidate == null) {
-                Text("Gimmer biçimindeki program JSON’unu yapıştır.")
+                Text(stringResource(R.string.paste_routine))
                 OutlinedButton(
                     onClick = {
                         val pasted = clipboard.primaryClip?.getItemAt(0)?.text?.toString()
-                        if (pasted.isNullOrBlank()) error = "Panoda program metni bulunamadı."
+                        if (pasted.isNullOrBlank()) error = R.string.clipboard_empty
                         else changeDraft(pasted)
                     },
                     enabled = !busy,
-                ) { Text("Panodan yapıştır") }
-                GimmerField(draft, ::changeDraft, "Program JSON’u", modifier = Modifier.fillMaxWidth(),
+                ) { Text(stringResource(R.string.paste_clipboard)) }
+                GimmerField(draft, ::changeDraft, stringResource(R.string.routine_json), modifier = Modifier.fillMaxWidth(),
                     placeholder = "{ \"routineVersion\": 1, \"days\": […] }",
                     keyboardOptions = KeyboardOptions(autoCorrectEnabled = false), singleLine = false, maxLines = 8)
-                if (error.isNotEmpty()) Text(error, color = MaterialTheme.colorScheme.error)
+                error?.let { Text(stringResource(it), color = MaterialTheme.colorScheme.error) }
                 Button(
                     onClick = {
                         focus.clearFocus()
@@ -110,11 +113,11 @@ private fun RoutineImportSheet(
                         scope.launch {
                             try {
                                 preview = withContext(Dispatchers.Default) { RoutineCodec.decode(text) }
-                                error = ""
+                                error = null
                             } catch (cancelled: CancellationException) {
                                 throw cancelled
                             } catch (_: Exception) {
-                                error = "Program doğrulanamadı. Günleri, hareket kimliklerini, hedefleri ve tür bilgilerini kontrol et."
+                                error = R.string.routine_invalid
                             } finally {
                                 busy = false
                             }
@@ -122,15 +125,19 @@ private fun RoutineImportSheet(
                     },
                     enabled = draft.isNotBlank() && !busy,
                     modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-                ) { Text(if (busy) "Doğrulanıyor…" else "Programı incele") }
+                ) { Text(if (busy) stringResource(R.string.validating) else stringResource(R.string.review_routine)) }
             } else {
-                Text("${candidate.size} gün · ${candidate.sumOf { it.exercises.size }} hareket",
+                val dayCount = pluralStringResource(R.plurals.day_count, candidate.size, candidate.size)
+                val totalExercises = candidate.sumOf { it.exercises.size }
+                val exerciseCount = pluralStringResource(R.plurals.exercise_count, totalExercises, totalExercises)
+                Text("$dayCount · $exerciseCount",
                     style = MaterialTheme.typography.titleMedium)
                 candidate.forEach { day ->
-                    Text("${day.name} · ${day.programName} · ${day.exercises.size} hareket",
+                    val count = pluralStringResource(R.plurals.exercise_count, day.exercises.size, day.exercises.size)
+                    Text("${workoutDayName(day.name)} · ${day.localizedProgramName()} · $count",
                         style = MaterialTheme.typography.bodyMedium)
                 }
-                Text("Onaylarsan mevcut programın bu programla değişir. Set ve ölçüm geçmişin korunur.")
+                Text(stringResource(R.string.replace_routine_description))
                 Button(
                     onClick = {
                         busy = true
@@ -138,10 +145,10 @@ private fun RoutineImportSheet(
                     },
                     enabled = !busy,
                     modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-                ) { Text(if (busy) "Kaydediliyor…" else "Programı değiştir") }
-                TextButton(onClick = { preview = null }, enabled = !busy) { Text("JSON’u düzenle") }
+                ) { Text(if (busy) stringResource(R.string.saving) else stringResource(R.string.replace_routine)) }
+                TextButton(onClick = { preview = null }, enabled = !busy) { Text(stringResource(R.string.edit_json)) }
             }
-            TextButton(onClick = onDismiss, enabled = !busy) { Text("Vazgeç") }
+            TextButton(onClick = onDismiss, enabled = !busy) { Text(stringResource(R.string.cancel)) }
         }
     }
 }

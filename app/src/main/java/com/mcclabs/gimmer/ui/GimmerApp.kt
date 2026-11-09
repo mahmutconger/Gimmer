@@ -21,8 +21,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
@@ -36,18 +38,19 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.mcclabs.gimmer.R
 import com.mcclabs.gimmer.nutrition.FoodSearchScreen
 import com.mcclabs.gimmer.nutrition.MealType
 import com.mcclabs.gimmer.nutrition.NutritionScreen
 import com.mcclabs.gimmer.nutrition.NutritionViewModel
 import java.time.LocalDate
 
-private enum class Destination(val route: String, val label: String, val icon: ImageVector) {
-    Workout("workout", "Antrenman", Icons.Rounded.FitnessCenter),
-    Timer("timer", "Zamanlayıcı", Icons.Rounded.Timer),
-    Nutrition("nutrition", "Beslenme", Icons.Rounded.Restaurant),
-    Progress("progress", "Gelişim", Icons.AutoMirrored.Rounded.TrendingUp),
-    Settings("settings", "Ayarlar", Icons.Rounded.Settings),
+private enum class Destination(val route: String, val label: Int, val icon: ImageVector) {
+    Workout("workout", R.string.workout, Icons.Rounded.FitnessCenter),
+    Timer("timer", R.string.timer, Icons.Rounded.Timer),
+    Nutrition("nutrition", R.string.nutrition, Icons.Rounded.Restaurant),
+    Progress("progress", R.string.progress, Icons.AutoMirrored.Rounded.TrendingUp),
+    Settings("settings", R.string.settings, Icons.Rounded.Settings),
 }
 
 private const val EXERCISE_HISTORY = "progress/detail/{name}"
@@ -57,13 +60,22 @@ private const val FOOD_SEARCH = "nutrition/food/{meal}/{date}"
 
 @Composable
 fun GimmerApp(viewModel: WorkoutViewModel = viewModel()) {
+    val language by viewModel.exerciseLanguage.collectAsStateWithLifecycle()
+    CompositionLocalProvider(LocalExerciseLanguage provides language) {
+        GimmerNavigationHost(viewModel)
+    }
+}
+
+@Composable
+private fun GimmerNavigationHost(viewModel: WorkoutViewModel) {
+    val context = LocalContext.current
     val nutrition: NutritionViewModel = viewModel()
     val snackbar = remember { SnackbarHostState() }
     LaunchedEffect(viewModel) {
-        viewModel.messages.collect { snackbar.showSnackbar(it) }
+        viewModel.messages.collect { snackbar.showSnackbar(context.getString(it.id, *it.arguments)) }
     }
     LaunchedEffect(nutrition) {
-        nutrition.messages.collect { snackbar.showSnackbar(it) }
+        nutrition.messages.collect { snackbar.showSnackbar(context.getString(it)) }
     }
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
@@ -100,7 +112,7 @@ fun GimmerApp(viewModel: WorkoutViewModel = viewModel()) {
         ) {
             composable(Destination.Workout.route) { WorkoutScreen(viewModel, contentPadding.calculateBottomPadding()) }
             composable(Destination.Timer.route) {
-                RestTimerScreen(viewModel.restTimer, contentPadding.calculateBottomPadding())
+                RestTimerScreen(viewModel, contentPadding.calculateBottomPadding())
             }
             composable(Destination.Nutrition.route) {
                 NutritionScreen(nutrition, contentPadding.calculateBottomPadding()) { meal, date ->
@@ -189,7 +201,7 @@ private fun GimmerNavigation(currentRoute: String?, timer: RestTimer, onSelect: 
                                 }
                             }
                         }
-                        Text(destination.label, color = tint, style = MaterialTheme.typography.labelSmall,
+                        Text(stringResource(destination.label), color = tint, style = MaterialTheme.typography.labelSmall,
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center)
                     }
                 }
@@ -202,12 +214,13 @@ private fun GimmerNavigation(currentRoute: String?, timer: RestTimer, onSelect: 
 private fun TimerNavigationIcon(timer: RestTimer) {
     val active by timer.active.collectAsStateWithLifecycle(false)
     val finished by timer.finished.collectAsStateWithLifecycle()
+    val status = stringResource(if (active) R.string.timer_running else R.string.timer_done)
     BadgedBox(badge = {
         if (active || finished) Badge(
             containerColor = if (finished) MaterialTheme.colorScheme.tertiary else MaterialTheme.colorScheme.primary,
         )
     }, modifier = Modifier.semantics {
-        if (active || finished) stateDescription = if (active) "Çalışıyor" else "Dinlenme tamamlandı"
+        if (active || finished) stateDescription = status
     }) {
         Icon(Icons.Rounded.Timer, contentDescription = null, modifier = Modifier.size(20.dp))
     }

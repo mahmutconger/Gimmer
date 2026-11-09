@@ -1,0 +1,22 @@
+<resources>
+    <string-array name="machine_chest_press_steps">
+        <item>Adjust the seat so the handles line up with the middle of your chest. Plant your feet firmly on the floor.</item>
+        <item>Keep your chest up and draw your shoulder blades back and down. Avoid overarching your lower back.</item>
+        <item>Keep your wrists straight and press the handles forward with control. Avoid snapping your elbows into lockout.</item>
+        <item>Inhale and return slowly to the starting position. Keep your shoulders from rolling forward.</item>
+    </string-array>
+
+    <string-array name="lat_pulldown_steps">
+        <item>Secure the thigh pad and grip the bar a little wider than shoulder width.</item>
+        <item>Lift your chest, lean back slightly, and keep that torso angle.</item>
+        <item>Drive your elbows down and bring the bar toward your upper chest. Keep the bar in front of your head.</item>
+        <item>Let the bar rise slowly without swinging your torso. Stop if you feel shoulder pain.</item>
+    </string-array>
+
+    <string-array name="hack_squat_steps">
+        <item>Keep your back and shoulders against the pads. Place your feet shoulder-width apart on the platform.</item>
+        <item>Brace your core, release the safety catch, and let your knees track in the same direction as your toes.</item>
+        <item>Lower with control, keeping your heels on the platform and your lower back against the pad.</item>
+        <item>Push through your whole foot to rise. Avoid snapping your knees into lockout, then reengage the safety catch.</item>
+    </string-array>
+</resources>

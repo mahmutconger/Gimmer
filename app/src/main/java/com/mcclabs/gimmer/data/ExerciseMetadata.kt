@@ -71,26 +71,4 @@ object ExerciseMetadata {
 
     fun muscleGroup(id: String): String =
         groups.entries.firstOrNull { id in it.value.split(",") }?.key ?: "Diğer"
-
-    fun instructions(id: String): List<String> = when (id) {
-        "machine_chest_press" -> listOf(
-            "Koltuğu, tutacaklar göğsünün orta hizasına gelecek şekilde ayarla. Ayaklarını yere sağlam bas.",
-            "Göğsünü yukarıda tut; kürek kemiklerini geriye ve aşağıya sabitle. Belini aşırı çukurlaştırma.",
-            "Bileklerini düz tutarak tutacakları kontrollü biçimde ileri it. Dirseklerini sertçe kilitleme.",
-            "Nefes alarak yavaşça başlangıç konumuna dön. Omuzlarını öne düşürme.",
-        )
-        "lat_pulldown" -> listOf(
-            "Diz pedini sabitle ve barı omuz genişliğinden biraz geniş tut.",
-            "Göğsünü yukarı kaldır; gövdeni hafifçe geriye eğ ve bu açıyı koru.",
-            "Dirseklerini aşağıya yönlendirerek barı üst göğsüne yaklaştır. Barı ensene çekme.",
-            "Gövdeni sallamadan barı yavaşça yukarı bırak. Omuz ekleminde ağrı varsa hareketi durdur.",
-        )
-        "hack_squat" -> listOf(
-            "Sırtını ve omuzlarını mindere yasla. Ayaklarını omuz genişliğinde platforma yerleştir.",
-            "Karnını sık, emniyet kilidini aç ve dizlerini ayak parmaklarınla aynı yöne yönlendir.",
-            "Topuklarını kaldırmadan, belini minderden ayırmadan kontrollü biçimde alçal.",
-            "Ayak tabanının tamamından kuvvet alarak yüksel. Dizlerini sertçe kilitleme ve emniyet kilidini kapat.",
-        )
-        else -> emptyList()
-    }
 }

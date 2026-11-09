@@ -33,12 +33,15 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.mcclabs.gimmer.R
 import com.mcclabs.gimmer.data.Exercise
 import com.mcclabs.gimmer.data.WorkoutDay
 import com.mcclabs.gimmer.data.WorkoutLog
@@ -81,14 +84,14 @@ fun WorkoutScreen(viewModel: WorkoutViewModel, bottomSpace: Dp) {
 
     Column(Modifier.fillMaxSize()) {
         Column(Modifier.padding(start = 20.dp, top = 16.dp, end = 20.dp, bottom = 8.dp)) {
-            ScreenHeading("Antrenman", "Programını seç ve setlerini kaydet.")
+            ScreenHeading(stringResource(R.string.workout), stringResource(R.string.workout_description))
         }
         Row(
             modifier = Modifier.horizontalScroll(rememberScrollState()).padding(horizontal = 20.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             days.forEach { item ->
-                PillChip(item.name, day.id == item.id, onClick = {
+                PillChip(workoutDayName(item.name), day.id == item.id, onClick = {
                     if (day.id != item.id) {
                         selectedDayId = item.id
                         expandedExercise = null
@@ -109,8 +112,8 @@ fun WorkoutScreen(viewModel: WorkoutViewModel, bottomSpace: Dp) {
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    SectionTitle("Hareketler")
-                    Text("${day.exercises.size} hareket", style = MaterialTheme.typography.labelMedium,
+                    SectionTitle(stringResource(R.string.exercises))
+                    Text(pluralStringResource(R.plurals.exercise_count, day.exercises.size, day.exercises.size), style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
@@ -123,13 +126,13 @@ fun WorkoutScreen(viewModel: WorkoutViewModel, bottomSpace: Dp) {
                     val partnerId = if (firstInPair) it.secondId else it.firstId
                     day.exercises.first { candidate -> candidate.id == partnerId }
                 }
-                val pairLabel = pair?.let { "Çift ${pairIndex + 1} · A${if (firstInPair) 1 else 2}" }
+                val pairNumber = pairIndex.takeIf { it >= 0 }?.plus(1)
                 val expanded = expandedExercise == exercise.id
                 item(key = "${day.id}:${exercise.id}") {
                     WorkoutExerciseCard(
                         exercise = exercise,
                         index = index,
-                        pairLabel = pairLabel,
+                        pairNumber = pairNumber,
                         partner = partner,
                         firstInPair = firstInPair,
                         onAlternate = {
@@ -150,7 +153,7 @@ fun WorkoutScreen(viewModel: WorkoutViewModel, bottomSpace: Dp) {
                     )
                 }
                 if (expanded && logs.isNotEmpty()) {
-                    item(key = "sets:${exercise.id}") { SectionTitle("Bugünkü setler") }
+                    item(key = "sets:${exercise.id}") { SectionTitle(stringResource(R.string.sets_today)) }
                     items(logs, key = { it.id }) { log ->
                         LogRow(log) { editingLog = log }
                     }
@@ -173,10 +176,10 @@ private fun ProgramCard(day: WorkoutDay) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-            Text(day.name, color = colors.primary, style = MaterialTheme.typography.labelLarge)
-            Text(day.programName, color = colors.onSurface, style = MaterialTheme.typography.headlineMedium)
+            Text(workoutDayName(day.name), color = colors.primary, style = MaterialTheme.typography.labelLarge)
+            Text(day.localizedProgramName(), color = colors.onSurface, style = MaterialTheme.typography.headlineMedium)
             if (day.pairs.isNotEmpty()) {
-                Text("A1 → A2 → dinlen", color = colors.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
+                Text(stringResource(R.string.paired_sequence), color = colors.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
             }
         }
         Surface(shape = CircleShape, color = colors.primary.copy(alpha = 0.14f), contentColor = colors.primary) {
@@ -190,7 +193,7 @@ private fun ProgramCard(day: WorkoutDay) {
 private fun WorkoutExerciseCard(
     exercise: Exercise,
     index: Int,
-    pairLabel: String?,
+    pairNumber: Int?,
     partner: Exercise?,
     firstInPair: Boolean,
     onAlternate: (Exercise) -> Unit,
@@ -232,8 +235,12 @@ private fun WorkoutExerciseCard(
         }
     }
     val colors = MaterialTheme.colorScheme
-    val target = "${exercise.targetSets} set × ${exercise.targetReps}" +
-        if (exercise.targetReps.endsWith(" sn")) "" else " tekrar"
+    val timed = exercise.targetReps.endsWith(" sn")
+    val target = pluralStringResource(
+        if (timed) R.plurals.timed_set_target else R.plurals.set_target,
+        exercise.targetSets, exercise.targetSets, exercise.targetReps.removeSuffix(" sn"),
+    )
+    val expansionStatus = stringResource(if (expanded) R.string.expanded else R.string.collapsed)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -242,7 +249,7 @@ private fun WorkoutExerciseCard(
     ) {
         Surface(
             onClick = onToggle,
-            modifier = Modifier.fillMaxWidth().semantics { stateDescription = if (expanded) "Açık" else "Kapalı" },
+            modifier = Modifier.fillMaxWidth().semantics { stateDescription = expansionStatus },
             color = if (expanded) colors.surfaceContainerHigh else colors.surfaceContainer,
             contentColor = colors.onSurface,
         ) {
@@ -260,11 +267,11 @@ private fun WorkoutExerciseCard(
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 9.dp))
                 }
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
-                    if (pairLabel != null) {
-                        Text(pairLabel, color = colors.primary, style = MaterialTheme.typography.labelMedium)
+                    if (pairNumber != null) {
+                        Text(stringResource(R.string.paired_exercise, pairNumber, if (firstInPair) 1 else 2), color = colors.primary, style = MaterialTheme.typography.labelMedium)
                     }
-                    Text(exercise.displayName, style = MaterialTheme.typography.titleMedium)
-                    Text("${exercise.muscleGroup} · $target", color = colors.onSurfaceVariant,
+                    Text(exercise.localizedName(LocalExerciseLanguage.current), style = MaterialTheme.typography.titleMedium)
+                    Text("${exerciseGroup(exercise.muscleGroup)} · $target", color = colors.onSurfaceVariant,
                         style = MaterialTheme.typography.bodySmall)
                 }
                 Icon(if (expanded) Icons.Rounded.ExpandLess else Icons.Rounded.ExpandMore,
@@ -281,9 +288,9 @@ private fun WorkoutExerciseCard(
         ) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Box(Modifier.weight(1f)) { SectionTitle("Set girişi") }
+                    Box(Modifier.weight(1f)) { SectionTitle(stringResource(R.string.set_entry)) }
                     IconButton(onClick = onInfo) {
-                        Icon(Icons.Rounded.Info, contentDescription = "Hareket bilgisi", tint = colors.primary)
+                        Icon(Icons.Rounded.Info, contentDescription = stringResource(R.string.exercise_info), tint = colors.primary)
                     }
                 }
                 PerformanceFields(weight, reps, rir, isWarmup, note, { weightDraft = it }, { repsDraft = it },
@@ -307,7 +314,7 @@ private fun WorkoutExerciseCard(
                     },
                     modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
                 ) {
-                    Text(if (saving) "Kaydediliyor…" else "Seti kaydet")
+                    Text(if (saving) stringResource(R.string.saving) else stringResource(R.string.save_set))
                 }
             }
         }

@@ -12,7 +12,7 @@ See the [README](README.en.md) for setup and development prerequisites.
 
 ## Code and verification
 
-- Write user-facing text in Turkish. Use English for Kotlin class, function, and variable names.
+- Add user-facing text to the Turkish and English string resources. Use English for Kotlin class, function, and variable names.
 - Reuse the existing Material 3 components and theme colors for UI changes. Try the change on a device and include a screenshot in the PR.
 - If the Room schema changes, provide a migration that preserves existing records and test the upgrade from an older database. If a backup or JSON format changes, verify that the app can still read older files.
 - Use sample records for screenshots and tests. Keep account details, keys, access tokens, and local settings out of the PR.

@@ -13,15 +13,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.LiveRegionMode
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.Dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.mcclabs.gimmer.R
 
 @Composable
-fun RestTimerScreen(timer: RestTimer, bottomSpace: Dp) {
+fun RestTimerScreen(viewModel: WorkoutViewModel, bottomSpace: Dp) {
+    val timer = viewModel.restTimer
+    val days by viewModel.days.collectAsStateWithLifecycle()
+    val exerciseId by timer.exerciseId.collectAsStateWithLifecycle()
+    val language = LocalExerciseLanguage.current
     val remaining by timer.remaining.collectAsStateWithLifecycle()
     val preset by timer.preset.collectAsStateWithLifecycle()
     val duration by timer.duration.collectAsStateWithLifecycle()
@@ -35,7 +41,7 @@ fun RestTimerScreen(timer: RestTimer, bottomSpace: Dp) {
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp).padding(bottom = bottomSpace),
         verticalArrangement = Arrangement.spacedBy(18.dp),
     ) {
-        ScreenHeading("Zamanlayıcı", "Set aralarında dinlenme süreni takip et.")
+        ScreenHeading(stringResource(R.string.timer), stringResource(R.string.timer_description))
         Surface(
             modifier = Modifier.fillMaxWidth(),
             shape = MaterialTheme.shapes.extraLarge,
@@ -48,16 +54,17 @@ fun RestTimerScreen(timer: RestTimer, bottomSpace: Dp) {
             ) {
                 Text(
                     when {
-                        active -> "Dinleniyorsun"
-                        finished -> "Dinlenme tamamlandı"
-                        else -> "Başlamaya hazır"
+                        active -> stringResource(R.string.timer_resting)
+                        finished -> stringResource(R.string.timer_done)
+                        else -> stringResource(R.string.timer_ready)
                     },
                     modifier = Modifier.semantics { liveRegion = LiveRegionMode.Polite },
                     style = MaterialTheme.typography.titleMedium,
                     color = colors.primary,
                 )
-                if (active || finished) exerciseName?.let {
-                    Text(it, style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
+                if (active || finished) exerciseName?.let { name ->
+                    val label = loggedExerciseName(name, exerciseId, days.orEmpty().flatMap { it.exercises }, language)
+                    Text(label, style = MaterialTheme.typography.bodyMedium, color = colors.onSurfaceVariant)
                 }
                 BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     val ringSize = minOf(216.dp * LocalDensity.current.fontScale, maxWidth)
@@ -81,17 +88,17 @@ fun RestTimerScreen(timer: RestTimer, bottomSpace: Dp) {
                     Icon(if (active || finished) Icons.Rounded.RestartAlt else Icons.Rounded.PlayArrow,
                         contentDescription = null, modifier = Modifier.size(20.dp))
                     Spacer(Modifier.width(8.dp))
-                    Text(if (active || finished) "Yeniden başlat" else "Başlat")
+                    Text(if (active || finished) stringResource(R.string.timer_restart) else stringResource(R.string.timer_start))
                 }
                 if (active || finished) {
                     OutlinedButton(onClick = timer::cancel, modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
-                        Text(if (finished) "Sıfırla" else "Dinlenmeyi bitir")
+                        Text(if (finished) stringResource(R.string.timer_reset) else stringResource(R.string.timer_end))
                     }
                 }
             }
         }
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            SectionTitle("Elle seçilen süre")
+            SectionTitle(stringResource(R.string.timer_manual))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 RestTimer.presets.forEach { option ->
                     PillChip(formatTime(option), selected = (if (active) duration else preset) == option,
@@ -99,8 +106,8 @@ fun RestTimerScreen(timer: RestTimer, bottomSpace: Dp) {
                 }
             }
             Text(
-                if (active) "Süreyi değiştirirsen sayaç yeniden başlar."
-                else "Set kaydedince bileşik hareketlerde 3 dakika, izole hareketlerde 90 saniye başlar.",
+                if (active) stringResource(R.string.timer_change)
+                else stringResource(R.string.timer_auto),
                 style = MaterialTheme.typography.bodySmall,
                 color = colors.onSurfaceVariant,
             )

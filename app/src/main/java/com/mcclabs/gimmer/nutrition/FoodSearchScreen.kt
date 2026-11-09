@@ -17,25 +17,28 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.mcclabs.gimmer.R
 import com.mcclabs.gimmer.ui.BackHeader
 import com.mcclabs.gimmer.ui.EmptyMessage
 import com.mcclabs.gimmer.ui.GimmerField
 import com.mcclabs.gimmer.ui.GimmerSheet
 import com.mcclabs.gimmer.ui.ScreenHeading
 import com.mcclabs.gimmer.ui.SectionTitle
-import com.mcclabs.gimmer.ui.Turkish
+import com.mcclabs.gimmer.ui.appLocale
 import com.mcclabs.gimmer.ui.formatMetric
 import java.text.NumberFormat
 import java.time.LocalDate
 
 private val DecimalInput = Regex("[0-9]{0,5}([.,][0-9]{0,4})?")
 
-internal fun formatNutritionGrams(grams: Double): String = NumberFormat.getNumberInstance(Turkish).apply {
+@Composable
+internal fun formatNutritionGrams(grams: Double): String = NumberFormat.getNumberInstance(appLocale()).apply {
     maximumFractionDigits = 4
 }.format(grams)
 
@@ -60,12 +63,12 @@ internal fun FoodSearchScreen(
         contentPadding = PaddingValues(start = 20.dp, top = 12.dp, end = 20.dp, bottom = 20.dp + bottomSpace),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        item { BackHeader("Beslenme", onBack) }
-        item { ScreenHeading("Besin ekle", mealType.label) }
+        item { BackHeader(stringResource(R.string.nutrition), onBack) }
+        item { ScreenHeading(stringResource(R.string.add_food), stringResource(mealType.label)) }
         item {
             GimmerField(
-                state.query, viewModel::changeQuery, "Besin adı veya barkod",
-                Modifier.fillMaxWidth(), placeholder = "Örn. yoğurt veya 869…",
+                state.query, viewModel::changeQuery, stringResource(R.string.food_name_or_barcode),
+                Modifier.fillMaxWidth(), placeholder = stringResource(R.string.food_search_example),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(onSearch = { submit() }),
                 leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) },
@@ -77,19 +80,19 @@ internal fun FoodSearchScreen(
                     onClick = submit,
                     enabled = state.query.trim().length >= 2 && !state.loading,
                     modifier = Modifier.weight(1f).heightIn(min = 48.dp),
-                ) { Text("Ara") }
+                ) { Text(stringResource(R.string.search)) }
                 OutlinedButton(
                     onClick = {
                         focus.clearFocus()
                         viewModel.openEditor()
                     },
                     modifier = Modifier.weight(1f).heightIn(min = 48.dp),
-                ) { Text("Elle ekle") }
+                ) { Text(stringResource(R.string.add_manually)) }
             }
         }
         item {
             Text(
-                "Besin kataloğu · Open Food Facts",
+                stringResource(R.string.food_catalog),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -98,18 +101,18 @@ internal fun FoodSearchScreen(
             item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
         }
         state.notice?.let { notice ->
-            item { EmptyMessage("Katalog sonucu", notice) }
+            item { EmptyMessage(stringResource(R.string.catalog_result), stringResource(notice)) }
         }
         if (state.results.isNotEmpty()) {
-            item { SectionTitle("Arama sonuçları") }
+            item { SectionTitle(stringResource(R.string.search_results)) }
             items(state.results, key = { "result-${it.barcode}" }) { result ->
                 FoodListRow(result.name, listOfNotNull(result.brands, result.barcode).joinToString(" · "),
                     enabled = !state.loading, onClick = { viewModel.loadProduct(result.barcode) })
             }
         }
-        item { SectionTitle("Son kullanılanlar") }
+        item { SectionTitle(stringResource(R.string.recent_foods)) }
         if (recentFoods.isEmpty()) {
-            item { EmptyMessage("Henüz besin yok", "Kaydettiğin besinleri burada tekrar kullanabilirsin.") }
+            item { EmptyMessage(stringResource(R.string.no_foods), stringResource(R.string.reuse_foods)) }
         }
         items(recentFoods, key = { "recent-${it.id}" }) { food ->
             FoodListRow(food.foodName, "${formatMetric(food.caloriesPer100g)} kcal / 100 g",
@@ -175,38 +178,38 @@ private fun FoodPortionSheet(
             Modifier.fillMaxWidth().imePadding().verticalScroll(rememberScrollState()).padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            ScreenHeading(editor.food?.foodName ?: "Elle besin ekle",
-                listOfNotNull(mealType.label, editor.brands).joinToString(" · "))
+            ScreenHeading(editor.food?.foodName ?: stringResource(R.string.add_food_manually),
+                listOfNotNull(stringResource(mealType.label), editor.brands).joinToString(" · "))
             if (editor.food == null) {
-                GimmerField(name, { name = it.take(200) }, "Besin adı", Modifier.fillMaxWidth())
-                SectionTitle("100 g için besin değerleri")
+                GimmerField(name, { name = it.take(200) }, stringResource(R.string.food_name), Modifier.fillMaxWidth())
+                SectionTitle(stringResource(R.string.nutrients_per_100g))
                 Text(
-                    "Tarttığın hâle ait 100 g değerlerini gir. Örneğin pişmiş tavuk için pişmiş ürün değerlerini kullan.",
+                    stringResource(R.string.weighed_food_description),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    DecimalField(calories, { calories = it }, "Kalori (kcal)", Modifier.weight(1f))
-                    DecimalField(protein, { protein = it }, "Protein (g)", Modifier.weight(1f))
+                    DecimalField(calories, { calories = it }, stringResource(R.string.calories_kcal), Modifier.weight(1f))
+                    DecimalField(protein, { protein = it }, stringResource(R.string.protein_g), Modifier.weight(1f))
                 }
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    DecimalField(carbs, { carbs = it }, "Karbonhidrat (g)", Modifier.weight(1f))
-                    DecimalField(fat, { fat = it }, "Yağ (g)", Modifier.weight(1f))
+                    DecimalField(carbs, { carbs = it }, stringResource(R.string.carbs_g), Modifier.weight(1f))
+                    DecimalField(fat, { fat = it }, stringResource(R.string.fat_g), Modifier.weight(1f))
                 }
                 if (food == null && listOf(name, calories, protein, carbs, fat).all { it.isNotBlank() }) {
-                    Text("100 g değerlerini kontrol et.", style = MaterialTheme.typography.bodySmall,
+                    Text(stringResource(R.string.check_nutrients), style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.error)
                 }
             } else {
-                NutrientPreview("100 g için", editor.food.nutrientsFor(100.0))
+                NutrientPreview(stringResource(R.string.per_100g), editor.food.nutrientsFor(100.0))
             }
-            DecimalField(gramsText, { gramsText = it }, "Tüketilen miktar (gram)", Modifier.fillMaxWidth())
+            DecimalField(gramsText, { gramsText = it }, stringResource(R.string.consumed_grams), Modifier.fillMaxWidth())
             if (gramsText.isNotBlank() && grams == null) {
-                Text("0'dan büyük ve en fazla 10.000 gram gir.", style = MaterialTheme.typography.bodySmall,
+                Text(stringResource(R.string.invalid_grams), style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error)
             }
             if (food != null && grams != null) {
-                NutrientPreview("${formatNutritionGrams(grams)} g için", food.nutrientsFor(grams))
+                NutrientPreview(stringResource(R.string.grams_portion, formatNutritionGrams(grams)), food.nutrientsFor(grams))
             }
             Button(
                 onClick = {
@@ -217,7 +220,7 @@ private fun FoodPortionSheet(
                 },
                 enabled = !saving && food != null && grams != null,
                 modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp),
-            ) { Text(if (saving) "Kaydediliyor…" else "Öğüne kaydet") }
+            ) { Text(if (saving) stringResource(R.string.saving) else stringResource(R.string.save_to_meal)) }
         }
     }
 }
@@ -234,7 +237,8 @@ private fun NutrientPreview(title: String, nutrients: Nutrients) {
             Text("${formatMetric(nutrients.calories)} kcal", color = colors.primary,
                 style = MaterialTheme.typography.titleMedium)
             Text(
-                "Protein ${formatMetric(nutrients.protein)} g · Karbonhidrat ${formatMetric(nutrients.carbs)} g · Yağ ${formatMetric(nutrients.fat)} g",
+                stringResource(R.string.macro_summary, formatMetric(nutrients.protein),
+                    formatMetric(nutrients.carbs), formatMetric(nutrients.fat)),
                 style = MaterialTheme.typography.bodySmall,
                 color = colors.onSurfaceVariant,
             )

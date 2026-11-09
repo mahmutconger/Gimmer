@@ -30,6 +30,7 @@ class RestTimer(
     val active = remaining.map { it > 0 }.distinctUntilChanged()
     val preset = savedState.getStateFlow("restPreset", 120)
     val duration = savedState.getStateFlow("restDuration", preset.value)
+    val exerciseId = savedState.getStateFlow<String?>("restExerciseId", null)
     val exerciseName = savedState.getStateFlow<String?>("restExerciseName", null)
 
     init {
@@ -67,13 +68,14 @@ class RestTimer(
 
     fun start() = start(preset.value, null)
 
-    fun startFor(exercise: Exercise) = start(restSecondsFor(exercise.isCompound), exercise.displayName)
+    fun startFor(exercise: Exercise) = start(restSecondsFor(exercise.isCompound), exercise.displayName, exercise.id)
 
-    fun restart() = start(duration.value, exerciseName.value)
+    fun restart() = start(duration.value, exerciseName.value, exerciseId.value)
 
-    private fun start(seconds: Int, name: String?) {
+    private fun start(seconds: Int, name: String?, id: String? = null) {
         _finished.value = false
         savedState["restDuration"] = seconds
+        savedState["restExerciseId"] = id
         savedState["restExerciseName"] = name
         savedState["restDeadline"] = SystemClock.elapsedRealtime() + seconds * 1000L
         _remaining.value = seconds
@@ -83,6 +85,7 @@ class RestTimer(
         savedState["restDeadline"] = 0L
         _remaining.value = 0
         _finished.value = false
+        savedState["restExerciseId"] = null
         savedState["restExerciseName"] = null
     }
 

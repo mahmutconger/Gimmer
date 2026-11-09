@@ -12,7 +12,7 @@ Kurulum ve geliştirme ortamı için [README](README.md) dosyasına bak.
 
 ## Kod ve doğrulama
 
-- Kullanıcıya gösterilen metinleri Türkçe yaz. Kotlin’de sınıf, fonksiyon ve değişken adlarını İngilizce tut.
+- Kullanıcıya gösterilen metinleri kaynak dosyalarında Türkçe ve İngilizce olarak ekle. Kotlin’de sınıf, fonksiyon ve değişken adlarını İngilizce tut.
 - Arayüz değişikliklerinde mevcut Material 3 bileşenlerini ve tema renklerini kullan. Cihazda dene ve ekran görüntüsünü PR’a ekle.
 - Room şeması değişirse mevcut kayıtları koruyan bir geçiş ekle ve eski veritabanından yükseltmeyi test et. Yedek veya JSON biçimi değişirse önceki dosyaların okunabildiğini doğrula.
 - Ekran görüntüleri ve test verileri için örnek kayıtlar kullan. Hesap bilgilerini, anahtarları, erişim belirteçlerini ve yerel ayar dosyalarını PR’a ekleme.

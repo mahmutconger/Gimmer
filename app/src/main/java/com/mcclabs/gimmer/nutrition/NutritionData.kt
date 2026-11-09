@@ -11,18 +11,19 @@ import androidx.room.Query
 import androidx.room.Relation
 import androidx.room.Transaction
 import androidx.room.withTransaction
+import com.mcclabs.gimmer.R
 import com.mcclabs.gimmer.data.WorkoutDatabase
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDate
 import java.time.ZoneId
 
-enum class MealType(val label: String) {
-    BREAKFAST("Kahvaltı"),
-    LUNCH("Öğle Yemeği"),
-    DINNER("Akşam Yemeği"),
-    PRE_WORKOUT("Antrenman Öncesi"),
-    POST_WORKOUT("Antrenman Sonrası"),
-    SNACK("Atıştırmalık"),
+enum class MealType(val label: Int) {
+    BREAKFAST(R.string.breakfast),
+    LUNCH(R.string.lunch),
+    DINNER(R.string.dinner),
+    PRE_WORKOUT(R.string.pre_workout),
+    POST_WORKOUT(R.string.post_workout),
+    SNACK(R.string.snack),
 }
 
 @Entity(tableName = "food_entries", indices = [Index("foodName")])

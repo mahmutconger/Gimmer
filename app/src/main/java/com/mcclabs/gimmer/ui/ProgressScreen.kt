@@ -17,10 +17,13 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.mcclabs.gimmer.R
 import com.mcclabs.gimmer.data.ExerciseSummary
 import com.mcclabs.gimmer.data.WorkoutLog
 import com.mcclabs.gimmer.data.WorkoutCatalog
@@ -30,20 +33,21 @@ fun ProgressScreen(viewModel: WorkoutViewModel, bottomSpace: Dp, onPhotos: () ->
     val summaries by viewModel.progressSummaries.collectAsStateWithLifecycle()
     val bodyweights by viewModel.bodyweights.collectAsStateWithLifecycle()
     val days by viewModel.days.collectAsStateWithLifecycle()
-    val names = remember(days) { days.orEmpty().flatMap { it.exercises }.associate { it.id to it.displayName } }
+    val exercises = remember(days) { days.orEmpty().flatMap { it.exercises } }
+    val language = LocalExerciseLanguage.current
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(start = 20.dp, top = 20.dp, end = 20.dp, bottom = 20.dp + bottomSpace),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item { ScreenHeading("Gelişim", "Ölçümlerini ve set geçmişini takip et.") }
+        item { ScreenHeading(stringResource(R.string.progress), stringResource(R.string.progress_description)) }
         item { ActivityCalendar(viewModel) }
         item { ProgressPhotosCard(onPhotos) }
         item { DailyConditionCard(viewModel) }
         item { BodyweightSection(bodyweights, viewModel) }
         item {
             Column(Modifier.padding(top = 6.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                SectionTitle("Hareket geçmişi")
+                SectionTitle(stringResource(R.string.exercise_history))
                 HistoryFilters(viewModel)
             }
         }
@@ -51,10 +55,10 @@ fun ProgressScreen(viewModel: WorkoutViewModel, bottomSpace: Dp, onPhotos: () ->
         when {
             entries == null -> item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
             entries.isEmpty() -> item {
-                EmptyMessage("Kayıt bulunamadı", "Bir set kaydet veya arama ve filtreleri değiştir.")
+                EmptyMessage(stringResource(R.string.no_records), stringResource(R.string.adjust_filters))
             }
             else -> items(entries, key = { it.exerciseId?.let { id -> "exercise:$id" } ?: "legacy:${it.exerciseName}" }) { summary ->
-                ExerciseSummaryRow(summary, names[summary.exerciseId] ?: WorkoutCatalog.displayName(summary.exerciseName)) {
+                ExerciseSummaryRow(summary, loggedExerciseName(summary.exerciseName, summary.exerciseId, exercises, language)) {
                     onExercise(summary)
                 }
             }
@@ -74,35 +78,36 @@ private fun HistoryFilters(viewModel: WorkoutViewModel) {
     val appliedFilters = listOf(filter.day.isNotEmpty(), filter.muscle.isNotEmpty(), filter.includeWarmups).count { it }
 
     GimmerField(filter.query, { query -> viewModel.filter.value = filter.copy(query = query) },
-        label = "Hareket ara", modifier = Modifier.fillMaxWidth(),
+        label = stringResource(R.string.search_exercises), modifier = Modifier.fillMaxWidth(),
         leadingIcon = { Icon(Icons.Rounded.Search, contentDescription = null) })
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
         OutlinedButton(onClick = { showFilters = !showFilters }, modifier = Modifier.heightIn(min = 48.dp)) {
             Icon(Icons.Rounded.Tune, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
-            val label = if (appliedFilters == 0) "Filtreler" else "Filtreler ($appliedFilters)"
-            Text(if (showFilters) "$label · Kapat" else label)
+            val filters = stringResource(R.string.filters)
+            val label = if (appliedFilters == 0) filters else "$filters ($appliedFilters)"
+            Text(if (showFilters) "$label · ${stringResource(R.string.close)}" else label)
         }
         if (appliedFilters > 0) {
             TextButton(onClick = { viewModel.filter.value = LogFilter(query = filter.query) }) {
-                Text("Temizle")
+                Text(stringResource(R.string.clear_filters))
             }
         }
     }
     if (showFilters) {
         Surface(shape = MaterialTheme.shapes.large, color = MaterialTheme.colorScheme.surfaceContainer) {
             Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("Program günü", style = MaterialTheme.typography.labelLarge)
-                FilterRow(dayOptions, filter.day) { viewModel.filter.value = filter.copy(day = it) }
-                Text("Kas grubu", style = MaterialTheme.typography.labelLarge)
-                FilterRow(muscleOptions, filter.muscle) { viewModel.filter.value = filter.copy(muscle = it) }
+                Text(stringResource(R.string.routine_day), style = MaterialTheme.typography.labelLarge)
+                FilterRow(dayOptions, filter.day, { workoutDayName(it) }) { viewModel.filter.value = filter.copy(day = it) }
+                Text(stringResource(R.string.muscle_group), style = MaterialTheme.typography.labelLarge)
+                FilterRow(muscleOptions, filter.muscle, { exerciseGroup(it) }) { viewModel.filter.value = filter.copy(muscle = it) }
                 Row(Modifier.fillMaxWidth().toggleable(
                     value = filter.includeWarmups,
                     role = Role.Switch,
                     onValueChange = { viewModel.filter.value = filter.copy(includeWarmups = it) },
                 ), verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Isınma setlerini göster", modifier = Modifier.weight(1f),
+                    Text(stringResource(R.string.show_warmups), modifier = Modifier.weight(1f),
                         style = MaterialTheme.typography.bodyMedium)
                     Switch(
                         checked = filter.includeWarmups,
@@ -115,10 +120,10 @@ private fun HistoryFilters(viewModel: WorkoutViewModel) {
 }
 
 @Composable
-private fun FilterRow(options: List<String>, selected: String, onSelect: (String) -> Unit) {
+private fun FilterRow(options: List<String>, selected: String, label: @Composable (String) -> String, onSelect: (String) -> Unit) {
     Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         options.forEach { value ->
-            PillChip(value.ifBlank { "Tümü" }, value == selected, onClick = { onSelect(value) })
+            PillChip(if (value.isBlank()) stringResource(R.string.all) else label(value), value == selected, onClick = { onSelect(value) })
         }
     }
 }
@@ -135,8 +140,9 @@ private fun ExerciseSummaryRow(summary: ExerciseSummary, displayName: String, on
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text(displayName, style = MaterialTheme.typography.titleMedium)
-                val description = if (summary.workingSets == 0L) "Isınma kayıtları"
-                    else "${summary.workingSets} çalışma seti · ${formatMetric(summary.volume)} kg hacim"
+                val description = if (summary.workingSets == 0L) stringResource(R.string.warmup_records)
+                    else pluralStringResource(R.plurals.working_set_volume, summary.workingSets.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(),
+                        summary.workingSets, formatMetric(summary.volume))
                 Text(description, color = colors.onSurfaceVariant, style = MaterialTheme.typography.bodySmall)
             }
             Icon(Icons.Rounded.ChevronRight, contentDescription = null, tint = colors.primary)
@@ -147,17 +153,15 @@ private fun ExerciseSummaryRow(summary: ExerciseSummary, displayName: String, on
 @Composable
 fun ExerciseHistoryScreen(name: String, exerciseId: String?, viewModel: WorkoutViewModel, bottomSpace: Dp, onBack: () -> Unit) {
     val days by viewModel.days.collectAsStateWithLifecycle()
-    val displayName = remember(name, exerciseId, days) {
-        days.orEmpty().asSequence().flatMap { it.exercises.asSequence() }
-            .firstOrNull { it.id == exerciseId }?.displayName ?: WorkoutCatalog.displayName(name)
-    }
+    val exercises = remember(days) { days.orEmpty().flatMap { it.exercises } }
+    val displayName = loggedExerciseName(name, exerciseId, exercises, LocalExerciseLanguage.current)
     val historyFlow = remember(name, exerciseId, viewModel) { viewModel.exerciseHistory(name, exerciseId) }
     val history by historyFlow.collectAsStateWithLifecycle(null)
     var editingLog by remember { mutableStateOf<WorkoutLog?>(null) }
 
     Column(Modifier.fillMaxSize()) {
         Box(Modifier.padding(start = 20.dp, end = 20.dp, top = 12.dp)) {
-            BackHeader("Gelişim", onBack)
+            BackHeader(stringResource(R.string.progress), onBack)
         }
         LazyColumn(
             contentPadding = PaddingValues(start = 20.dp, top = 20.dp, end = 20.dp, bottom = 20.dp + bottomSpace),
@@ -168,15 +172,15 @@ fun ExerciseHistoryScreen(name: String, exerciseId: String?, viewModel: WorkoutV
             when {
                 detail == null -> item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
                 detail.logs.isEmpty() -> item {
-                    EmptyMessage("Kayıt bulunamadı", "Bu hareket için seçili filtrelere uyan set kalmadı.")
+                    EmptyMessage(stringResource(R.string.no_records), stringResource(R.string.no_matching_sets))
                 }
                 else -> {
                     item { ExerciseMetrics(detail) }
                     item { ExerciseProgressChart(detail.dailyProgress) }
                     item {
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            SectionTitle("Set geçmişi")
-                            Text("En yeni kayıtlar önce", style = MaterialTheme.typography.bodySmall,
+                            SectionTitle(stringResource(R.string.set_history))
+                            Text(stringResource(R.string.newest_first), style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
@@ -195,18 +199,18 @@ private fun ExerciseMetrics(detail: ExerciseHistory) {
     val colors = MaterialTheme.colorScheme
     Surface(shape = MaterialTheme.shapes.large, color = colors.surfaceContainer) {
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            SectionTitle("Çalışma setleri")
+            SectionTitle(stringResource(R.string.working_sets))
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                MetricTile(detail.workingSets.toString(), "Toplam set", Modifier.weight(1f))
-                MetricTile("${formatMetric(detail.volume)} kg", "Toplam hacim", Modifier.weight(1f))
+                MetricTile(detail.workingSets.toString(), stringResource(R.string.total_sets), Modifier.weight(1f))
+                MetricTile("${formatMetric(detail.volume)} kg", stringResource(R.string.total_volume), Modifier.weight(1f))
             }
             val first = detail.first
             val last = detail.last
             if (first != null && last != null && first.id != last.id) {
                 HorizontalDivider(color = colors.outlineVariant)
                 Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                    SetSnapshot("İlk set", first, Modifier.weight(1f))
-                    SetSnapshot("Son set", last, Modifier.weight(1f))
+                    SetSnapshot(stringResource(R.string.first_set), first, Modifier.weight(1f))
+                    SetSnapshot(stringResource(R.string.last_set), last, Modifier.weight(1f))
                 }
             }
         }
@@ -228,7 +232,7 @@ private fun MetricTile(value: String, label: String, modifier: Modifier = Modifi
 private fun SetSnapshot(label: String, log: WorkoutLog, modifier: Modifier = Modifier) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(3.dp)) {
         Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text("${formatMetric(log.weight)} kg · ${log.reps} tekrar", style = MaterialTheme.typography.bodyMedium)
+        Text("${formatMetric(log.weight)} kg · ${pluralStringResource(R.plurals.rep_count, log.reps, log.reps)}", style = MaterialTheme.typography.bodyMedium)
         Text("RIR ${log.rir ?: "—"}", style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
     }

@@ -18,11 +18,13 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.google.android.gms.auth.api.identity.AuthorizationResult
 import com.google.android.gms.auth.api.identity.Identity
+import com.mcclabs.gimmer.R
 import com.mcclabs.gimmer.backup.BACKUPS_PER_DEVICE
 import com.mcclabs.gimmer.backup.BackupInterval
 import com.mcclabs.gimmer.backup.BackupStatus
@@ -44,7 +46,7 @@ internal fun DriveSettings(viewModel: WorkoutViewModel) {
     var account by rememberSaveable { mutableStateOf<String?>(null) }
     var waitingForConsent by rememberSaveable { mutableStateOf(false) }
     var selectingAccount by rememberSaveable { mutableStateOf(false) }
-    var status by rememberSaveable { mutableStateOf("") }
+    var status by rememberSaveable { mutableStateOf<Int?>(null) }
     val authClient = remember(context) { Identity.getAuthorizationClient(context) }
 
     fun resetAuthorization() {
@@ -58,7 +60,7 @@ internal fun DriveSettings(viewModel: WorkoutViewModel) {
         val token = result.driveAccessToken()
         resetAuthorization()
         if (token == null) {
-            status = "Google hesabı yetkilendirilemedi."
+            status = R.string.drive_auth_failed
             return
         }
         when (completedAction) {
@@ -69,7 +71,7 @@ internal fun DriveSettings(viewModel: WorkoutViewModel) {
         }
     }
     fun authorize(nextAction: DriveAction, selectedAccount: String?) {
-        status = ""
+        status = null
         account = selectedAccount
         action = nextAction
     }
@@ -81,11 +83,11 @@ internal fun DriveSettings(viewModel: WorkoutViewModel) {
                 finishAuthorization(authClient.getAuthorizationResultFromIntent(data))
             } catch (_: Exception) {
                 resetAuthorization()
-                status = "Google hesabı yetkilendirilemedi. Lütfen yeniden deneyin."
+                status = R.string.drive_auth_retry
             }
         } else {
             resetAuthorization()
-            status = "Google Drive erişimi iptal edildi."
+            status = R.string.drive_access_cancelled
         }
     }
     val accountPicker = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -111,20 +113,20 @@ internal fun DriveSettings(viewModel: WorkoutViewModel) {
             throw cancelled
         } catch (_: Exception) {
             resetAuthorization()
-            status = "Google Drive bağlantısı kurulamadı. Hesap izinlerini kontrol edin."
+            status = R.string.drive_connection_failed
         }
     }
 
     val enabled = !busy && action == null && !selectingAccount
     val selectedAccount = settings.account
-    SettingsCard("Bulut yedeği", "Antrenman, beslenme, ölçüm ve gelişim fotoğraflarını Google Drive'da sakla.") {
+    SettingsCard(stringResource(R.string.cloud_backup), stringResource(R.string.cloud_backup_description)) {
         Row(
             Modifier.fillMaxWidth().toggleable(
                 value = selectedAccount != null,
                 enabled = enabled,
                 role = Role.Switch,
                 onValueChange = { checked ->
-                    status = ""
+                    status = null
                     if (checked) {
                         try {
                             selectingAccount = true
@@ -133,7 +135,7 @@ internal fun DriveSettings(viewModel: WorkoutViewModel) {
                             ))
                         } catch (_: Exception) {
                             selectingAccount = false
-                            status = "Google hesap seçicisi açılamadı."
+                            status = R.string.drive_picker_failed
                         }
                     } else {
                         viewModel.disableAutomaticBackup()
@@ -143,19 +145,19 @@ internal fun DriveSettings(viewModel: WorkoutViewModel) {
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("Otomatik Drive yedeklemesi", Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.automatic_drive_backup), Modifier.weight(1f), style = MaterialTheme.typography.titleMedium)
             Switch(checked = selectedAccount != null, onCheckedChange = null, enabled = enabled)
         }
 
-        Text("Yedekleme aralığı", style = MaterialTheme.typography.labelLarge)
+        Text(stringResource(R.string.backup_interval), style = MaterialTheme.typography.labelLarge)
         Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             BackupInterval.entries.forEach { interval ->
-                PillChip(interval.label, settings.interval == interval, enabled = enabled,
+                PillChip(stringResource(interval.label), settings.interval == interval, enabled = enabled,
                     onClick = { viewModel.setBackupInterval(interval) })
             }
         }
         Text(
-            "Android, internet bağlantısı uygun olduğunda yedekler. Bu kurulumun son $BACKUPS_PER_DEVICE sürümü saklanır.",
+            stringResource(R.string.backup_retention, BACKUPS_PER_DEVICE),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -163,34 +165,34 @@ internal fun DriveSettings(viewModel: WorkoutViewModel) {
         if (selectedAccount != null) {
             Text(selectedAccount, style = MaterialTheme.typography.labelMedium)
             settings.lastBackupAt?.let {
-                Text("Son Drive yedeği · ${formatSessionDate(it)}", style = MaterialTheme.typography.bodySmall)
+                Text(stringResource(R.string.latest_drive_backup, formatSessionDate(it)), style = MaterialTheme.typography.bodySmall)
             }
             val message = when (settings.status) {
-                BackupStatus.WAITING -> "Sıradaki yedekleme bekleniyor."
+                BackupStatus.WAITING -> stringResource(R.string.backup_waiting)
                 BackupStatus.SAVED -> null
-                BackupStatus.EMPTY -> "Yedeklenecek kayıt bulunamadı."
-                BackupStatus.AUTH_REQUIRED -> "Otomatik yedekleme için Google Drive iznini yenile."
-                BackupStatus.RETRYING -> "Yedekleme yeniden denenecek."
-                BackupStatus.FAILED -> "Otomatik yedekleme tamamlanamadı."
+                BackupStatus.EMPTY -> stringResource(R.string.backup_empty)
+                BackupStatus.AUTH_REQUIRED -> stringResource(R.string.backup_auth_required)
+                BackupStatus.RETRYING -> stringResource(R.string.backup_retrying)
+                BackupStatus.FAILED -> stringResource(R.string.backup_failed)
             }
             message?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
             if (settings.status == BackupStatus.AUTH_REQUIRED || settings.status == BackupStatus.FAILED) {
                 OutlinedButton(onClick = { authorize(DriveAction.ENABLE, selectedAccount) }, enabled = enabled) {
-                    Text(if (settings.status == BackupStatus.AUTH_REQUIRED) "İzni yenile" else "Yeniden dene")
+                    Text(if (settings.status == BackupStatus.AUTH_REQUIRED) stringResource(R.string.renew_access) else stringResource(R.string.try_again))
                 }
             }
         }
 
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         Button(onClick = { authorize(DriveAction.BACKUP, selectedAccount) }, enabled = enabled,
-            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("Drive'a yedekle") }
+            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text(stringResource(R.string.backup_to_drive)) }
         OutlinedButton(onClick = { authorize(DriveAction.RESTORE, selectedAccount) }, enabled = enabled,
-            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text("Drive'dan geri yükle") }
+            modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp)) { Text(stringResource(R.string.restore_from_drive)) }
         if (!enabled) {
             LinearProgressIndicator(Modifier.fillMaxWidth())
-            Text(if (busy) "Drive işlemi sürüyor…" else "Google hesabı bekleniyor…")
+            Text(if (busy) stringResource(R.string.drive_busy) else stringResource(R.string.drive_waiting_account))
         }
-        if (status.isNotBlank()) Text(status, style = MaterialTheme.typography.bodySmall)
+        status?.let { Text(stringResource(it), style = MaterialTheme.typography.bodySmall) }
     }
 
     restoreOptions?.let {
@@ -203,19 +205,19 @@ private fun ChooseDriveBackup(options: DriveRestoreOptions, onDismiss: () -> Uni
     var selected by rememberSaveable(options.files.first().id) { mutableStateOf(options.files.first().id) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Drive yedeğini seç") },
+        title = { Text(stringResource(R.string.select_drive_backup)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text("Seçilen yedekteki kayıtlar cihazındakilerle birleştirilir.")
+                Text(stringResource(R.string.merge_backup_description))
                 Column(
                     Modifier.heightIn(max = 280.dp).verticalScroll(rememberScrollState()).selectableGroup(),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     options.files.forEach { file ->
                         val source = when {
-                            file.legacy -> "Önceki Gimmer sürümü"
-                            file.name == options.deviceFileName -> "Bu kurulum"
-                            else -> "Başka bir kurulum"
+                            file.legacy -> stringResource(R.string.legacy_install)
+                            file.name == options.deviceFileName -> stringResource(R.string.this_install)
+                            else -> stringResource(R.string.other_install)
                         }
                         Row(
                             Modifier.fillMaxWidth().selectable(selected == file.id, role = Role.RadioButton,
@@ -233,7 +235,7 @@ private fun ChooseDriveBackup(options: DriveRestoreOptions, onDismiss: () -> Uni
                 }
             }
         },
-        confirmButton = { Button(onClick = { onRestore(selected) }) { Text("Geri yükle") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Vazgeç") } },
+        confirmButton = { Button(onClick = { onRestore(selected) }) { Text(stringResource(R.string.restore)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } },
     )
 }

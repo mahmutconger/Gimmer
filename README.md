@@ -17,7 +17,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/Lisans-MIT-315D9B?style=flat-square" alt="MIT Lisansı"></a>
 </p>
 
-Gimmer, kas geliştirme antrenmanlarını, öğünlerini ve toparlanma kayıtlarını bir arada tutan Türkçe bir Android uygulamasıdır. Salonda önceki ağırlığını aramak yerine son set değerleriyle başlayabilir, zaman içinde hangi hareketlerde ilerlediğini görebilirsin.
+Gimmer, kas geliştirme antrenmanlarını, öğünlerini ve toparlanma kayıtlarını bir arada tutan bir Android uygulamasıdır. Uygulama dili ve hareket dili için Türkçe ve İngilizceyi ayrı ayrı seçebilirsin. Salonda önceki ağırlığını aramak yerine son set değerleriyle başlayabilir, zaman içinde hangi hareketlerde ilerlediğini görebilirsin.
 
 ## Ekranlar
 

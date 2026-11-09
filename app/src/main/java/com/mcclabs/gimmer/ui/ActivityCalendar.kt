@@ -16,6 +16,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -23,17 +25,20 @@ import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.mcclabs.gimmer.R
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-
-private val CalendarMonth = DateTimeFormatter.ofPattern("LLLL yyyy", Turkish)
-private val CalendarDay = DateTimeFormatter.ofPattern("d MMMM yyyy", Turkish)
-private val Weekdays = listOf("Pt", "Sa", "Ça", "Pe", "Cu", "Ct", "Pa")
+import java.time.format.TextStyle
 
 @Composable
 internal fun ActivityCalendar(viewModel: WorkoutViewModel) {
+    val locale = appLocale()
+    val calendarMonth = DateTimeFormatter.ofPattern("LLLL yyyy", locale)
+    val calendarDay = DateTimeFormatter.ofPattern("d MMMM yyyy", locale)
+    val legend = stringResource(R.string.calendar_legend)
     val zone = ZoneId.systemDefault()
     val currentMonth = YearMonth.now(zone)
     var selectedMonth by rememberSaveable { mutableStateOf<String?>(null) }
@@ -57,13 +62,13 @@ internal fun ActivityCalendar(viewModel: WorkoutViewModel) {
 
     Surface(shape = MaterialTheme.shapes.extraLarge, color = colors.surfaceContainer) {
         Column(Modifier.fillMaxWidth().padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            SectionTitle("Antrenman takvimi")
+            SectionTitle(stringResource(R.string.workout_calendar))
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                 IconButton(onClick = { selectedMonth = month.minusMonths(1).toString() }) {
-                    Icon(Icons.Rounded.ChevronLeft, "Önceki ay", tint = colors.primary)
+                    Icon(Icons.Rounded.ChevronLeft, stringResource(R.string.previous_month), tint = colors.primary)
                 }
                 Text(
-                    month.format(CalendarMonth).replaceFirstChar { it.titlecase(Turkish) },
+                    month.format(calendarMonth).replaceFirstChar { it.titlecase(locale) },
                     style = MaterialTheme.typography.titleMedium,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.weight(1f),
@@ -71,13 +76,13 @@ internal fun ActivityCalendar(viewModel: WorkoutViewModel) {
                 IconButton(onClick = {
                     selectedMonth = month.plusMonths(1).takeUnless { it == currentMonth }?.toString()
                 }, enabled = month < currentMonth) {
-                    Icon(Icons.Rounded.ChevronRight, "Sonraki ay")
+                    Icon(Icons.Rounded.ChevronRight, stringResource(R.string.next_month))
                 }
             }
 
             Row(Modifier.fillMaxWidth().clearAndSetSemantics {}, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                Weekdays.forEach { day ->
-                    Text(day, modifier = Modifier.weight(1f), textAlign = TextAlign.Center,
+                DayOfWeek.entries.forEach { day ->
+                    Text(day.getDisplayName(TextStyle.SHORT, locale), modifier = Modifier.weight(1f), textAlign = TextAlign.Center,
                         style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceVariant)
                 }
             }
@@ -97,12 +102,14 @@ internal fun ActivityCalendar(viewModel: WorkoutViewModel) {
                                     else -> 3
                                 }
                                 val selected = selectedDay == date.dayOfMonth
+                                val dateLabel = date.format(calendarDay)
+                                val description = if (activity == null) dateLabel
+                                    else "$dateLabel, ${calendarSetCount(count)}"
                                 Surface(
                                     modifier = cell.clip(cellShape).selectable(selected, enabled = activity != null,
                                         role = Role.Button, onClick = { selectedDay = date.dayOfMonth })
                                         .semantics {
-                                            contentDescription = if (activity == null) date.format(CalendarDay)
-                                            else "${date.format(CalendarDay)}, $count set"
+                                            contentDescription = description
                                         },
                                     shape = cellShape,
                                     color = intensity[level],
@@ -125,22 +132,26 @@ internal fun ActivityCalendar(viewModel: WorkoutViewModel) {
             } else {
                 val selected = selectedDay.takeIf { it in 1..month.lengthOfMonth() }?.let(month::atDay)
                 Text(
-                    if (selected == null) "${monthActivity.size} antrenman günü"
-                    else "${selected.format(CalendarDay)} · ${monthActivity[selected] ?: 0L} set",
+                    if (selected == null) pluralStringResource(R.plurals.workout_day_count, monthActivity.size, monthActivity.size)
+                    else "${selected.format(calendarDay)} · ${calendarSetCount(monthActivity[selected] ?: 0L)}",
                     style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant,
                 )
             }
             Row(
-                Modifier.align(Alignment.End).clearAndSetSemantics { contentDescription = "Mavi tonlar set sayısını gösterir" },
+                Modifier.align(Alignment.End).clearAndSetSemantics { contentDescription = legend },
                 horizontalArrangement = Arrangement.spacedBy(4.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("Az", style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceVariant)
+                Text(stringResource(R.string.few), style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceVariant)
                 intensity.forEach { color ->
                     Spacer(Modifier.size(12.dp).background(color, MaterialTheme.shapes.extraSmall))
                 }
-                Text("Çok", style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceVariant)
+                Text(stringResource(R.string.many), style = MaterialTheme.typography.labelSmall, color = colors.onSurfaceVariant)
             }
         }
     }
 }
+
+@Composable
+private fun calendarSetCount(count: Long): String =
+    pluralStringResource(R.plurals.set_count, count.coerceAtMost(Int.MAX_VALUE.toLong()).toInt(), count)

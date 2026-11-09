@@ -15,10 +15,12 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
+import com.mcclabs.gimmer.R
 
 @Composable
 internal fun ProgressPhotoLock(onBack: () -> Unit, content: @Composable () -> Unit) {
@@ -26,7 +28,7 @@ internal fun ProgressPhotoLock(onBack: () -> Unit, content: @Composable () -> Un
     val keyguard = activity.getSystemService(KeyguardManager::class.java)
     var unlocked by remember { mutableStateOf(false) }
     var authenticating by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf<String?>(null) }
+    var error by remember { mutableStateOf<Int?>(null) }
     var cancellation by remember { mutableStateOf<CancellationSignal?>(null) }
     val credential = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         authenticating = false
@@ -50,13 +52,15 @@ internal fun ProgressPhotoLock(onBack: () -> Unit, content: @Composable () -> Un
     @Suppress("DEPRECATION")
     fun confirmCredential() {
         cancellation = null
-        val intent = keyguard.createConfirmDeviceCredentialIntent("Görsel gelişim", "Fotoğraflarını açmak için doğrula.")
+        val intent = keyguard.createConfirmDeviceCredentialIntent(
+            activity.getString(R.string.visual_progress), activity.getString(R.string.unlock_photos_prompt),
+        )
         if (intent != null) {
             authenticating = true
             credential.launch(intent)
         } else {
             authenticating = false
-            error = "Önce cihaz ayarlarından bir ekran kilidi oluştur."
+            error = R.string.set_screen_lock
         }
     }
 
@@ -66,7 +70,7 @@ internal fun ProgressPhotoLock(onBack: () -> Unit, content: @Composable () -> Un
     }
 
     Column(Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 12.dp)) {
-        PhotoHeading("Görsel gelişim", "Kişisel fotoğraf günlüğün", onBack)
+        PhotoHeading(stringResource(R.string.visual_progress), stringResource(R.string.personal_photo_journal), onBack)
         Column(
             Modifier.weight(1f).fillMaxWidth().padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp, Alignment.CenterVertically),
@@ -76,32 +80,32 @@ internal fun ProgressPhotoLock(onBack: () -> Unit, content: @Composable () -> Un
                 Icon(Icons.Rounded.Fingerprint, null, Modifier.padding(20.dp).size(42.dp),
                     tint = MaterialTheme.colorScheme.onPrimaryContainer)
             }
-            Text("Fotoğrafların kilitli", style = MaterialTheme.typography.headlineSmall)
-            Text("Parmak izinle veya cihaz ekran kilidinle doğrulayarak günlüğünü aç.",
+            Text(stringResource(R.string.photos_locked), style = MaterialTheme.typography.headlineSmall)
+            Text(stringResource(R.string.photos_locked_description),
                 style = MaterialTheme.typography.bodyMedium, textAlign = TextAlign.Center,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
             error?.let {
-                Text(it, color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center)
+                Text(stringResource(it), color = MaterialTheme.colorScheme.error, textAlign = TextAlign.Center)
             }
             Button(enabled = !authenticating, onClick = {
                 error = null
                 if (!keyguard.isDeviceSecure) {
-                    error = "Önce cihaz ayarlarından bir ekran kilidi oluştur."
+                    error = R.string.set_screen_lock
                     return@Button
                 }
                 authenticating = true
                 val signal = CancellationSignal()
                 cancellation = signal
                 val executor = androidx.core.content.ContextCompat.getMainExecutor(activity)
-                val builder = BiometricPrompt.Builder(activity).setTitle("Görsel gelişim")
-                    .setSubtitle("Fotoğraf günlüğünü açmak için doğrula.")
+                val builder = BiometricPrompt.Builder(activity).setTitle(activity.getString(R.string.visual_progress))
+                    .setSubtitle(activity.getString(R.string.unlock_journal_prompt))
                 if (Build.VERSION.SDK_INT >= 30) {
                     builder.setAllowedAuthenticators(
                         android.hardware.biometrics.BiometricManager.Authenticators.BIOMETRIC_STRONG or
                             android.hardware.biometrics.BiometricManager.Authenticators.DEVICE_CREDENTIAL,
                     )
                 } else {
-                    builder.setNegativeButton("Ekran kilidini kullan", executor) { _, _ -> confirmCredential() }
+                    builder.setNegativeButton(activity.getString(R.string.use_screen_lock), executor) { _, _ -> confirmCredential() }
                 }
                 builder.build().authenticate(signal, executor, object : BiometricPrompt.AuthenticationCallback() {
                     override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
@@ -115,17 +119,13 @@ internal fun ProgressPhotoLock(onBack: () -> Unit, content: @Composable () -> Un
                         cancellation = null
                         if (errorCode != BiometricPrompt.BIOMETRIC_ERROR_CANCELED &&
                             errorCode != BiometricPrompt.BIOMETRIC_ERROR_USER_CANCELED) {
-                            error = if (Build.VERSION.SDK_INT < 30) {
-                                "Biyometrik doğrulama tamamlanamadı. Ekran kilidini kullanabilirsin."
-                            } else {
-                                "Doğrulama tamamlanamadı. Yeniden dene."
-                            }
+                            error = R.string.biometric_error
                         }
                     }
                 })
-            }) { Text("Kilidi aç") }
+            }) { Text(stringResource(R.string.unlock)) }
             if (Build.VERSION.SDK_INT < 30) {
-                TextButton(enabled = !authenticating, onClick = ::confirmCredential) { Text("Ekran kilidini kullan") }
+                TextButton(enabled = !authenticating, onClick = ::confirmCredential) { Text(stringResource(R.string.use_screen_lock)) }
             }
         }
     }

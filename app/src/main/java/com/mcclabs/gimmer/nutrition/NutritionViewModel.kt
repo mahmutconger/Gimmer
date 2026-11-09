@@ -6,6 +6,7 @@ import androidx.core.content.edit
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import com.mcclabs.gimmer.R
 import com.mcclabs.gimmer.data.WorkoutDatabase
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -54,7 +55,7 @@ internal data class FoodSearchState(
     val query: String = "",
     val loading: Boolean = false,
     val results: List<FoodSearchResult> = emptyList(),
-    val notice: String? = null,
+    val notice: Int? = null,
     val editor: FoodEditor? = null,
     val saving: Boolean = false,
 )
@@ -98,7 +99,7 @@ internal class NutritionViewModel(application: Application, private val savedSta
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     private val searchState = MutableStateFlow(FoodSearchState())
     val search = searchState.asStateFlow()
-    private val events = Channel<String>(Channel.BUFFERED)
+    private val events = Channel<Int>(Channel.BUFFERED)
     val messages = events.receiveAsFlow()
     private var searchJob: Job? = null
 
@@ -137,16 +138,16 @@ internal class NutritionViewModel(application: Application, private val savedSta
         }
         fetchFood {
             val results = foodClient.search(query)
-            it.copy(results = results, notice = "Eşleşen besin bulunamadı.".takeIf { results.isEmpty() })
+            it.copy(results = results, notice = R.string.food_not_found.takeIf { results.isEmpty() })
         }
     }
 
     fun loadProduct(barcode: String) = fetchFood {
         when (val result = foodClient.lookup(barcode)) {
             is ProductLookup.Found -> it.copy(editor = FoodEditor(result.food, result.brands))
-            ProductLookup.Missing -> it.copy(notice = "Bu barkoda ait ürün bulunamadı.")
+            ProductLookup.Missing -> it.copy(notice = R.string.barcode_not_found)
             ProductLookup.UnusableNutrition -> it.copy(notice =
-                "Bu ürünün doğrulanabilir 100 g değerleri eksik. Etiketteki 100 g değerlerini elle girebilirsin.")
+                R.string.nutrition_missing)
         }
     }
 
@@ -161,9 +162,9 @@ internal class NutritionViewModel(application: Application, private val savedSta
                 throw error
             } catch (error: Exception) {
                 val message = if (error is HttpException && error.code() == 429) {
-                    "Çok fazla arama yapıldı. Biraz bekleyip tekrar dene."
+                    R.string.search_rate_limited
                 } else {
-                    "Besin kataloğuna ulaşılamadı. Bağlantını kontrol edip tekrar dene."
+                    R.string.catalog_unavailable
                 }
                 searchState.value = state.copy(loading = false, notice = message)
             }
@@ -189,12 +190,12 @@ internal class NutritionViewModel(application: Application, private val savedSta
             try {
                 repository.save(LoggedMeal(meal, food))
                 searchState.update { it.copy(editor = null) }
-                events.send("Besin kaydedildi.")
+                events.send(R.string.food_saved)
                 onSaved()
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
-                events.send("Besin kaydedilemedi. Tekrar dene.")
+                events.send(R.string.food_save_failed)
             } finally {
                 searchState.update { it.copy(saving = false) }
             }
@@ -205,11 +206,11 @@ internal class NutritionViewModel(application: Application, private val savedSta
         viewModelScope.launch {
             try {
                 repository.delete(id)
-                events.send("Besin kaydı silindi.")
+                events.send(R.string.food_deleted)
             } catch (error: CancellationException) {
                 throw error
             } catch (error: Exception) {
-                events.send("Besin kaydı silinemedi. Tekrar dene.")
+                events.send(R.string.food_delete_failed)
             }
         }
     }

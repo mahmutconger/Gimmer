@@ -19,20 +19,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.mcclabs.gimmer.R
 import com.mcclabs.gimmer.ui.GimmerField
 import com.mcclabs.gimmer.ui.GimmerSheet
 import com.mcclabs.gimmer.ui.ScreenHeading
 import com.mcclabs.gimmer.ui.SectionTitle
-import com.mcclabs.gimmer.ui.Turkish
+import com.mcclabs.gimmer.ui.appLocale
 import com.mcclabs.gimmer.ui.formatMetric
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
-private val NutritionDateFormat = DateTimeFormatter.ofPattern("d MMMM yyyy", Turkish)
 private val ProteinTint = Color(0xFFBDAEFF)
 private val CarbsTint = Color(0xFF92D8CB)
 private val FatTint = Color(0xFFF1C582)
@@ -54,10 +55,10 @@ internal fun NutritionScreen(
         contentPadding = PaddingValues(start = 20.dp, top = 16.dp, end = 20.dp, bottom = 20.dp + bottomSpace),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        item { ScreenHeading("Beslenme", "Öğünlerini kaydet, günlük hedeflerini takip et.") }
+        item { ScreenHeading(stringResource(R.string.nutrition), stringResource(R.string.nutrition_description)) }
         item { NutritionDateBar(day, viewModel::selectDate) }
         item { NutritionDashboard(day, targets) { editingTargets = true } }
-        item { SectionTitle("Öğünler") }
+        item { SectionTitle(stringResource(R.string.meals)) }
         items(MealType.entries.size, key = { MealType.entries[it].name }) { index ->
             val mealType = MealType.entries[index]
             MealCard(
@@ -78,16 +79,16 @@ internal fun NutritionScreen(
     pendingDelete?.let { meal ->
         AlertDialog(
             onDismissRequest = { pendingDelete = null },
-            title = { Text("Besin kaydı silinsin mi?") },
+            title = { Text(stringResource(R.string.delete_food_title)) },
             text = { Text(meal.food.foodName) },
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.deleteMeal(meal.log.id)
                     pendingDelete = null
-                }) { Text("Sil") }
+                }) { Text(stringResource(R.string.delete)) }
             },
             dismissButton = {
-                TextButton(onClick = { pendingDelete = null }) { Text("Vazgeç") }
+                TextButton(onClick = { pendingDelete = null }) { Text(stringResource(R.string.cancel)) }
             },
         )
     }
@@ -103,16 +104,16 @@ private fun NutritionDateBar(day: NutritionDay, onDate: (LocalDate) -> Unit) {
             horizontalArrangement = Arrangement.SpaceBetween,
         ) {
             IconButton(onClick = { onDate(day.date.minusDays(1)) }) {
-                Icon(Icons.AutoMirrored.Rounded.KeyboardArrowLeft, "Önceki gün")
+                Icon(Icons.AutoMirrored.Rounded.KeyboardArrowLeft, stringResource(R.string.previous_day))
             }
             Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                 if (day.date == day.today) {
-                    Text("Bugün", style = MaterialTheme.typography.labelMedium, color = colors.primary)
+                    Text(stringResource(R.string.today), style = MaterialTheme.typography.labelMedium, color = colors.primary)
                 }
-                Text(day.date.format(NutritionDateFormat), style = MaterialTheme.typography.titleSmall)
+                Text(day.date.format(DateTimeFormatter.ofPattern("d MMMM yyyy", appLocale())), style = MaterialTheme.typography.titleSmall)
             }
             IconButton(enabled = day.date < day.today, onClick = { onDate(day.date.plusDays(1)) }) {
-                Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, "Sonraki gün")
+                Icon(Icons.AutoMirrored.Rounded.KeyboardArrowRight, stringResource(R.string.next_day))
             }
         }
     }
@@ -133,21 +134,21 @@ private fun NutritionDashboard(day: NutritionDay, targets: NutritionTargets, onE
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("Günlük hedefler", style = MaterialTheme.typography.titleLarge)
-                    Text("Tüketilen / Hedef", style = MaterialTheme.typography.labelMedium,
+                    Text(stringResource(R.string.daily_targets), style = MaterialTheme.typography.titleLarge)
+                    Text(stringResource(R.string.consumed_target), style = MaterialTheme.typography.labelMedium,
                         color = colors.onSurfaceVariant)
                 }
-                TextButton(onClick = onEdit) { Text("Düzenle") }
+                TextButton(onClick = onEdit) { Text(stringResource(R.string.edit)) }
             }
             if (day.meals == null) {
                 LinearProgressIndicator(Modifier.fillMaxWidth())
             } else {
                 val totals = day.totals
-                NutritionProgress("Kalori", totals.calories, targets.calories, "kcal", colors.primary)
+                NutritionProgress(stringResource(R.string.calories), totals.calories, targets.calories, "kcal", colors.primary)
                 HorizontalDivider(color = colors.outlineVariant)
-                NutritionProgress("Protein", totals.protein, targets.protein, "g", ProteinTint)
-                NutritionProgress("Karbonhidrat", totals.carbs, targets.carbs, "g", CarbsTint)
-                NutritionProgress("Yağ", totals.fat, targets.fat, "g", FatTint)
+                NutritionProgress(stringResource(R.string.protein), totals.protein, targets.protein, "g", ProteinTint)
+                NutritionProgress(stringResource(R.string.carbs), totals.carbs, targets.carbs, "g", CarbsTint)
+                NutritionProgress(stringResource(R.string.fat), totals.fat, targets.fat, "g", FatTint)
             }
         }
     }
@@ -185,15 +186,15 @@ private fun MealCard(
         Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f).padding(vertical = 7.dp)) {
-                    Text(type.label, style = MaterialTheme.typography.titleMedium)
+                    Text(stringResource(type.label), style = MaterialTheme.typography.titleMedium)
                     if (!loading) {
-                        val detail = if (meals.isEmpty()) "Henüz kayıt yok"
+                        val detail = if (meals.isEmpty()) stringResource(R.string.no_meal_logs)
                             else "${formatMetric(meals.totals().calories)} kcal"
                         Text(detail, style = MaterialTheme.typography.bodySmall, color = colors.onSurfaceVariant)
                     }
                 }
                 IconButton(onClick = onAdd, enabled = !loading) {
-                    Icon(Icons.Rounded.Add, "${type.label} öğününe besin ekle", tint = colors.primary)
+                    Icon(Icons.Rounded.Add, stringResource(R.string.add_to_meal, stringResource(type.label)), tint = colors.primary)
                 }
             }
             meals.forEach { meal ->
@@ -207,7 +208,7 @@ private fun MealCard(
                         )
                     }
                     IconButton(onClick = { onDelete(meal) }) {
-                        Icon(Icons.Rounded.DeleteOutline, "${meal.food.foodName} kaydını sil",
+                        Icon(Icons.Rounded.DeleteOutline, stringResource(R.string.delete_food_record, meal.food.foodName),
                             tint = colors.onSurfaceVariant)
                     }
                 }
@@ -230,11 +231,11 @@ private fun TargetEditor(initial: NutritionTargets, onDismiss: () -> Unit, onSav
             Modifier.fillMaxWidth().imePadding().verticalScroll(rememberScrollState()).padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp),
         ) {
-            ScreenHeading("Günlük hedefler", "Kalori ve makro hedeflerini belirle.")
-            TargetField(calories, { calories = it }, "Kalori (kcal)")
-            TargetField(protein, { protein = it }, "Protein (g)")
-            TargetField(carbs, { carbs = it }, "Karbonhidrat (g)")
-            TargetField(fat, { fat = it }, "Yağ (g)")
+            ScreenHeading(stringResource(R.string.daily_targets), stringResource(R.string.daily_targets_description))
+            TargetField(calories, { calories = it }, stringResource(R.string.calories_kcal))
+            TargetField(protein, { protein = it }, stringResource(R.string.protein_g))
+            TargetField(carbs, { carbs = it }, stringResource(R.string.carbs_g))
+            TargetField(fat, { fat = it }, stringResource(R.string.fat_g))
             Button(
                 onClick = { onSave(targets) },
                 enabled = targets.isValid,
