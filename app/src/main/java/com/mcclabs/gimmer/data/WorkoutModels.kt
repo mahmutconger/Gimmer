@@ -82,6 +82,7 @@ object WorkoutCatalog {
             "machine_chest_press" to "lat_pulldown",
             "incline_db_press" to "seated_cable_row",
             "db_lateral_raise" to "incline_db_curl",
+            "overhead_cable_triceps_ext" to "hammer_curl",
         ),
         WorkoutDay(
             id = "tuesday",
@@ -98,9 +99,8 @@ object WorkoutCatalog {
                 Exercise("cable_crunch", "Cable Crunch", 3, "10-15"),
             ),
         ).withPairs(
-            "hack_squat" to "standing_calf_raise",
             "leg_extension" to "seated_leg_curl",
-            "hip_adduction" to "reverse_crunch",
+            "standing_calf_raise" to "reverse_crunch",
         ),
         WorkoutDay(
             id = "thursday",
@@ -155,9 +155,9 @@ object WorkoutCatalog {
                 Exercise("ab_wheel", "Ab Wheel", 3, "8-12"),
             ),
         ).withPairs(
-            "leg_press" to "seated_calf_raise",
             "lying_leg_curl" to "hanging_knee_raise",
             "hip_abduction" to "ab_wheel",
+            "seated_calf_raise" to "side_plank",
         ),
     )
 
